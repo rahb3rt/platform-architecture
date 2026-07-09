@@ -6,6 +6,8 @@
 
 This document describes the architecture of a production platform I designed, built, and operate end-to-end: 14 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment. The application code is proprietary (it runs my company); this repo documents the engineering.
 
+**By the numbers:** 14 services · 16,000+ jobs scheduled · 5,100+ invoices processed · 58,000+ vehicle telemetry readings · hourly per-tenant backups · 1 operator. Counts are `SELECT COUNT(*)` aggregates from the production database.
+
 ---
 
 ## System Topology
@@ -67,6 +69,21 @@ flowchart TB
 | nginx | Reverse proxy, TLS, routing | nginx:alpine |
 | MySQL, MinIO | Persistence and object storage | Managed as containers |
 
+## Core API Surface
+
+The core API is a Flask monolith-by-choice: **60 route domains, 520 endpoints**, one deployable.
+
+| Area | Capabilities |
+|---|---|
+| Billing | invoicing, payments, payment methods, statements, quotes, customer credit, expenses |
+| Contracts | templates, e-signing, audit trail |
+| CRM | customers, properties, leads, requests, sites |
+| Workforce | employees, teams, timeclock, timecards, time-off, payroll |
+| Operations | jobs, scheduling, calendar, route optimization, mowing, plowing plans, service plans |
+| Communications | messaging, notifications, marketing campaigns, social |
+| Field & assets | vehicle telemetry, assets, access devices, access events, weather |
+| Platform | auth, RBAC roles, orgs, dashboards, reports, insights, webhook deliveries |
+
 ## CI/CD
 
 - Every service builds via **GitHub Actions → multi-arch images (amd64/arm64, Buildx + QEMU) → GHCR**.
@@ -96,6 +113,30 @@ The deploy system is published (genericized) at [compose-multienv-deploy](https:
 **Backups.** Every tenant stack takes hourly backups of its database and object storage.
 
 **Design-for-failure at the edge.** The vehicle telemetry firmware assumes connectivity is unreliable and data loss is unacceptable: NDJSON rows persist to SD with size/time-based file rotation, survive reboots, and upload as gzip-compressed batches over LTE with retry and backoff.
+
+## A Failure, on the Record
+
+**Postmortem — June 2026 — "The observer effect."** The monitoring dashboard gained a live topology view (container stats, sparklines, request traces) on top of its real-user-monitoring ingest. The monitoring database lives on the same MySQL server as production, and within hours the topology view was timing out — every timeout representing load pressure on the database that also serves the business.
+
+The first fix made it worse: parallelizing all DB queries and trace fetches multiplied the concurrent load on an already-stressed database, and was reverted the same day. The durable fix went the opposite direction — batch the RUM inserts, reduce query limits, poll slower, fetch fewer traces, and put explicit timeouts and error containment on every query so the dashboard degrades instead of hammering.
+
+**The lesson: monitoring is production.** The observer carries the same load budget as the observed, and parallelism is not a fix for overload — it is a multiplier on it.
+
+```
+jun 08  ff77443  Fix topology timeout: batch RUM inserts into chunks of 25
+jun 08  730466e  Fix topology timeout: parallelize all DB queries and trace fetches
+jun 08  d4ce6c3  Revert "Fix topology timeout: parallelize all DB queries and trace fetches"
+jun 08  9036fc7  Fix topology timeout: reduce query limits safely
+jun 08  b743295  Fix topology timeouts: slower polling, fewer trace fetches
+jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
+```
+
+## Security Posture
+
+- **Isolation by default** — every tenant stack gets its own network, database, object storage, and secrets; there is no shared state to leak across.
+- **Secrets out of band** — credentials live in per-environment env files injected at deploy time, never in images or git.
+- **TLS at the edge** — each stack fronts through its own edge proxy with TLS termination; certificates auto-provisioned and renewed.
+- **AuthN/AuthZ** — database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.
 
 ## Design Decisions
 
