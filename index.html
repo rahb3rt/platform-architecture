@@ -106,7 +106,7 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
     padding: 13px 15px 12px;
     opacity: 0; transform: translateY(6px);
-    animation: settle 0.45s ease forwards;
+    animation: settle 0.35s ease forwards;
   }
   @keyframes settle { to { opacity: 1; transform: none; } }
   .svc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
@@ -209,45 +209,45 @@
     <div class="tier">
       <div class="tier-name">edge</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.05s"><div class="svc-top"><span class="dot"></span><span class="svc-name">nginx</span></div><div class="svc-role">TLS termination and routing for every environment</div><span class="svc-stack">nginx:alpine · generated config</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">nginx</span></div><div class="svc-role">TLS termination and routing for every environment</div><span class="svc-stack">nginx:alpine · generated config</span></div>
       </div>
     </div>
 
     <div class="tier">
       <div class="tier-name">applications</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.1s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic; the single source of truth</div><span class="svc-stack">Python · FastAPI · MySQL</span></div>
-        <div class="svc" style="animation-delay:.15s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
-        <div class="svc" style="animation-delay:.2s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
-        <div class="svc" style="animation-delay:.25s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
+        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic; the single source of truth</div><span class="svc-stack">Python · FastAPI · MySQL</span></div>
+        <div class="svc" style="animation-delay:.06s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
       </div>
     </div>
 
     <div class="tier">
       <div class="tier-name">async &amp; integration</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.3s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms</span></div><div class="svc-role">Two-way customer texting</div><span class="svc-stack">Python</span></div>
-        <div class="svc" style="animation-delay:.35s"><div class="svc-top"><span class="dot"></span><span class="svc-name">email ingest &amp; send</span></div><div class="svc-role">Inbound parsing and outbound delivery</div><span class="svc-stack">Node</span></div>
-        <div class="svc" style="animation-delay:.4s"><div class="svc-top"><span class="dot"></span><span class="svc-name">transactional mail</span></div><div class="svc-role">Templated customer notifications</div><span class="svc-stack">HTML templating</span></div>
-        <div class="svc" style="animation-delay:.45s"><div class="svc-top"><span class="dot"></span><span class="svc-name">payment reconciliation</span></div><div class="svc-role">Matches external payments to invoices</div><span class="svc-stack">Python</span></div>
-        <div class="svc" style="animation-delay:.5s"><div class="svc-top"><span class="dot"></span><span class="svc-name">document extraction</span></div><div class="svc-role">Inbound documents to structured data</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms</span></div><div class="svc-role">Two-way customer texting</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.14s"><div class="svc-top"><span class="dot"></span><span class="svc-name">email ingest &amp; send</span></div><div class="svc-role">Inbound parsing and outbound delivery</div><span class="svc-stack">Node</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">transactional mail</span></div><div class="svc-role">Templated customer notifications</div><span class="svc-stack">HTML templating</span></div>
+        <div class="svc" style="animation-delay:.18s"><div class="svc-top"><span class="dot"></span><span class="svc-name">payment reconciliation</span></div><div class="svc-role">Matches external payments to invoices</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">document extraction</span></div><div class="svc-role">Inbound documents to structured data</div><span class="svc-stack">Python</span></div>
       </div>
     </div>
 
     <div class="tier">
       <div class="tier-name">platform</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.55s"><div class="svc-top"><span class="dot"></span><span class="svc-name">health aggregator</span></div><div class="svc-role">Auto-discovers containers, probes each on a loop</div><span class="svc-stack">FastAPI · Docker SDK · HTTP/MySQL/TCP</span></div>
-        <div class="svc" style="animation-delay:.6s"><div class="svc-top"><span class="dot"></span><span class="svc-name">monitoring &amp; SLOs</span></div><div class="svc-role">Container stats, logs, alerting, SLO tracking</div><span class="svc-stack">Next.js · RBAC</span></div>
-        <div class="svc" style="animation-delay:.65s"><div class="svc-top"><span class="dot"></span><span class="svc-name">mysql</span></div><div class="svc-role">Primary datastore, per-tenant instances</div><span class="svc-stack">MySQL 8.0</span></div>
-        <div class="svc" style="animation-delay:.7s"><div class="svc-top"><span class="dot"></span><span class="svc-name">minio</span></div><div class="svc-role">S3-compatible object storage</div><span class="svc-stack">MinIO</span></div>
+        <div class="svc" style="animation-delay:.22s"><div class="svc-top"><span class="dot"></span><span class="svc-name">health aggregator</span></div><div class="svc-role">Auto-discovers containers, probes each on a loop</div><span class="svc-stack">FastAPI · Docker SDK · HTTP/MySQL/TCP</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">monitoring &amp; SLOs</span></div><div class="svc-role">Container stats, logs, alerting, SLO tracking</div><span class="svc-stack">Next.js · RBAC</span></div>
+        <div class="svc" style="animation-delay:.26s"><div class="svc-top"><span class="dot"></span><span class="svc-name">mysql</span></div><div class="svc-role">Primary datastore, per-tenant instances</div><span class="svc-stack">MySQL 8.0</span></div>
+        <div class="svc" style="animation-delay:.03s"><div class="svc-top"><span class="dot"></span><span class="svc-name">minio</span></div><div class="svc-role">S3-compatible object storage</div><span class="svc-stack">MinIO</span></div>
       </div>
     </div>
 
     <div class="tier">
       <div class="tier-name">field hardware</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.75s"><div class="svc-top"><span class="dot"></span><span class="svc-name">vehicle telemetry</span></div><div class="svc-role">OBD-II + GPS from trucks; store-and-forward over LTE</div><span class="svc-stack">C++ · ESP32 · Freematics</span></div>
+        <div class="svc" style="animation-delay:.30s"><div class="svc-top"><span class="dot"></span><span class="svc-name">vehicle telemetry</span></div><div class="svc-role">OBD-II + GPS from trucks; store-and-forward over LTE</div><span class="svc-stack">C++ · ESP32 · Freematics</span></div>
       </div>
     </div>
   </div>
