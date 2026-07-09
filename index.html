@@ -160,6 +160,19 @@
   .rel p { color: var(--muted); font-size: 14px; }
   .rel .card .probe { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--accent); display: block; margin-top: 10px; }
 
+  /* ── postmortem ──────────────────────────────── */
+  .pm { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
+  .pm .pm-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  .pm h3 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+  .pm p { color: var(--muted); font-size: 15px; max-width: 76ch; margin-bottom: 12px; }
+  .pm p strong { color: var(--text); }
+  .pm-tl { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .pm-row { display: flex; gap: 16px; padding: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .pm-row .d { font-family: 'IBM Plex Mono', monospace; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .pm-row .h { font-family: 'IBM Plex Mono', monospace; color: var(--accent); font-size: 12px; white-space: nowrap; }
+  .pm-row .m { color: var(--text); }
+  @media (max-width: 640px) { .pm-row { flex-wrap: wrap; gap: 8px; } }
+
   /* ── decisions ───────────────────────────────── */
   .dec { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 780px) { .dec { grid-template-columns: 1fr; } }
@@ -198,8 +211,9 @@
   <p class="lede">This platform runs a real business — customers, payments, field crews, vehicles. I designed it, built every service, and operate it alone: <strong>CI/CD, observability, SLO tracking, backups, and on-call included.</strong> The application code is proprietary; the engineering is documented here.</p>
   <div class="statline">
     <span><b>14</b> services</span>
-    <span><b>3+</b> isolated environments</span>
-    <span><b>hourly</b> tenant backups</span>
+    <span><b>16,000+</b> jobs scheduled</span>
+    <span><b>5,100+</b> invoices processed</span>
+    <span><b>58,000+</b> telemetry readings</span>
     <span><b>1</b> operator</span>
   </div>
 </header>
@@ -403,6 +417,41 @@
       <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets</span></div>
       <div class="card"><h3>Backups</h3><p>Every tenant stack takes hourly backups of its database and object storage. Restore plus redeploy is the whole disaster-recovery story — by design.</p><span class="probe">hourly · per-tenant</span></div>
       <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="postmortem">
+  <div class="wrap">
+    <h2>A failure, on the record</h2>
+    <p class="sec-note">Reliability claims are cheap. Here is a real incident from this platform's history — commit hashes included, verifiable in the repo.</p>
+    <div class="pm">
+      <div class="pm-eyebrow">postmortem · june 2026 · monitoring</div>
+      <h3>The observer effect</h3>
+      <p>The monitoring dashboard gained a live topology view — container stats, sparklines, request traces — on top of its real-user-monitoring ingest. The monitoring database lives on the same MySQL server as production. Within hours the topology view was timing out, and every one of those timeouts represented load pressure on the database that also serves the business.</p>
+      <p><strong>The first fix made it worse.</strong> Parallelizing all DB queries and trace fetches is the intuitive move when something is slow — and it multiplied the concurrent load on an already-stressed database. Reverted the same day. The durable fix went the opposite direction: batch the RUM inserts, reduce query limits, poll slower, fetch fewer traces, and put explicit timeouts and error containment on every query so the dashboard degrades instead of hammering.</p>
+      <p><strong>The lesson:</strong> monitoring is production. The observer carries the same load budget as the observed — and parallelism is not a fix for overload, it is a multiplier on it.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">ff77443</span><span class="m">Fix topology timeout: batch RUM inserts into chunks of 25</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">730466e</span><span class="m">Fix topology timeout: parallelize all DB queries and trace fetches</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">d4ce6c3</span><span class="m">Revert "Fix topology timeout: parallelize all DB queries and trace fetches"</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">9036fc7</span><span class="m">Fix topology timeout: reduce query limits safely</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">b743295</span><span class="m">Fix topology timeouts: slower polling, fewer trace fetches</span></div>
+        <div class="pm-row"><span class="d">jun 09</span><span class="h">4aa70e5</span><span class="m">Fix topology loading: reduce limits, add timeouts, catch errors</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <h2>Security posture</h2>
+    <p class="sec-note">Sized to the platform, enforced by structure rather than policy documents.</p>
+    <div class="rel">
+      <div class="card"><h3>Isolation by default</h3><p>Every tenant stack gets its own network, database, object storage, and secrets. There is no shared state to leak across — isolation is the architecture, not a setting.</p><span class="probe">per-tenant network · db · objects</span></div>
+      <div class="card"><h3>Secrets out of band</h3><p>Credentials live in per-environment env files injected at deploy time — never in images, never in git. Each environment holds only its own.</p><span class="probe">per-env injection · nothing in images</span></div>
+      <div class="card"><h3>TLS at the edge</h3><p>Every stack fronts through its own edge proxy with TLS termination; certificates are provisioned and renewed automatically.</p><span class="probe">auto-provisioned certs</span></div>
+      <div class="card"><h3>AuthN/AuthZ</h3><p>Database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.</p><span class="probe">rbac · sessions · token revocation</span></div>
     </div>
   </div>
 </section>
