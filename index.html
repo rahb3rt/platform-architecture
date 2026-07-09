@@ -253,6 +253,109 @@
   </div>
 </section>
 
+<section id="dataflow">
+  <div class="wrap">
+    <h2>Data flow</h2>
+    <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed is observability.</p>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 960 530" role="img" aria-label="Data-flow diagram: users through nginx to the frontends and core API; async workers and field vehicles feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
+      <defs>
+        <marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FDF8C"/></marker>
+        <marker id="m-ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6FB3FF"/></marker>
+      </defs>
+      <style>
+        .dg-t { font-family:'Space Grotesk',sans-serif; font-size:13.5px; fill:#D7E1EE; font-weight:500; text-anchor:middle; }
+        .dg-s { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#7E8EA6; text-anchor:middle; }
+        .dg-r { font-family:'IBM Plex Mono',monospace; font-size:11px; fill:#AFC0D6; }
+        .dg-g { font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:#7E8EA6; letter-spacing:1.5px; text-anchor:middle; }
+        .dg-lb { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#6FB3FF; }
+        .dg-fl { stroke:#3FDF8C; stroke-width:1.4; fill:none; }
+        .dg-fd { stroke:#6FB3FF; stroke-width:1.4; fill:none; }
+        .dg-pr { stroke:#7E8EA6; stroke-width:1.2; fill:none; stroke-dasharray:4 5; opacity:.7; }
+      </style>
+
+      <!-- users -->
+      <rect x="390" y="18" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="38">users</text>
+      <text class="dg-s" x="480" y="54">web · kiosk · phone</text>
+
+      <!-- field vehicles -->
+      <rect x="760" y="18" width="180" height="58" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="850" y="41">field vehicles</text>
+      <text class="dg-s" x="850" y="58">esp32 · obd-ii · gps</text>
+
+      <!-- nginx -->
+      <rect x="390" y="92" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="112">nginx</text>
+      <text class="dg-s" x="480" y="128">tls · routing</text>
+
+      <!-- frontends -->
+      <rect x="170" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="260" y="186">public website</text>
+      <text class="dg-s" x="260" y="202">next.js</text>
+      <rect x="390" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="186">operations app</text>
+      <text class="dg-s" x="480" y="202">next.js</text>
+      <rect x="610" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="700" y="186">kiosk</text>
+      <text class="dg-s" x="700" y="202">typescript</text>
+
+      <!-- core api -->
+      <rect x="390" y="248" width="180" height="54" rx="8" fill="#161F2E" stroke="#3A557A"/>
+      <text class="dg-t" x="480" y="271">core api</text>
+      <text class="dg-s" x="480" y="288">fastapi · source of truth</text>
+
+      <!-- stores -->
+      <rect x="300" y="346" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="380" y="366">mysql</text>
+      <text class="dg-s" x="380" y="382">per-tenant</text>
+      <rect x="500" y="346" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="580" y="366">minio</text>
+      <text class="dg-s" x="580" y="382">s3 objects</text>
+
+      <!-- workers group -->
+      <rect x="20" y="210" width="250" height="172" rx="8" fill="#121A27" stroke="#24344A"/>
+      <text class="dg-g" x="145" y="234">ASYNC WORKERS</text>
+      <text class="dg-r" x="40" y="260">sms</text>
+      <text class="dg-r" x="40" y="284">email ingest &amp; send</text>
+      <text class="dg-r" x="40" y="308">transactional mail</text>
+      <text class="dg-r" x="40" y="332">payment reconciliation</text>
+      <text class="dg-r" x="40" y="356">document extraction</text>
+
+      <!-- observability -->
+      <rect x="20" y="440" width="300" height="56" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="170" y="463">health + monitoring</text>
+      <text class="dg-s" x="170" y="480">auto-discovery · slo tracking</text>
+
+      <!-- request path (green) -->
+      <path class="dg-fl" d="M480,64 L480,88" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M480,138 L480,162" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M458,138 L276,162" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M502,138 L684,162" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M260,212 L444,245" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M480,212 L480,244" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M700,212 L516,245" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M270,288 L386,278" marker-end="url(#m-ok)"/>
+
+      <!-- data + telemetry (blue) -->
+      <path class="dg-fd" d="M450,302 L388,342" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M510,302 L572,342" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M850,76 L850,276 L576,276" marker-end="url(#m-ac)"/>
+      <text class="dg-lb" x="858" y="168">store-and-forward</text>
+      <text class="dg-lb" x="858" y="182">gzip over lte</text>
+
+      <!-- probes (dashed) -->
+      <path class="dg-pr" d="M320,468 L930,468"/>
+      <text class="dg-s" x="630" y="459">http · mysql · tcp probes — every service, every environment</text>
+      <path class="dg-pr" d="M380,468 L380,396"/>
+      <path class="dg-pr" d="M580,468 L580,396"/>
+      <path class="dg-pr" d="M480,468 L480,306"/>
+      <path class="dg-pr" d="M145,440 L145,386"/>
+    </svg>
+    </div>
+  </div>
+</section>
+
 <section id="delivery">
   <div class="wrap">
     <h2>Delivery</h2>
