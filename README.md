@@ -2,6 +2,8 @@
 
 **A solo-built, solo-operated microservices platform running a real business in production since 2023.**
 
+**▶ Interactive version: [rahb3rt.github.io/platform-architecture](https://rahb3rt.github.io/platform-architecture/)**
+
 This document describes the architecture of a production platform I designed, built, and operate end-to-end: 14 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment. The application code is proprietary (it runs my company); this repo documents the engineering.
 
 ---
