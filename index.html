@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Architecture — Robert Davis</title>
+<meta name="description" content="One engineer. Fourteen services. Production since 2023. Architecture of a solo-built, solo-operated production platform.">
+<meta property="og:title" content="Platform Architecture — Robert Davis">
+<meta property="og:description" content="One engineer. Fourteen services. Production since 2023.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='38' fill='%233FDF8C'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1420;
+    --panel: #161F2E;
+    --panel-2: #121A27;
+    --line: #24344A;
+    --text: #D7E1EE;
+    --muted: #7E8EA6;
+    --ok: #3FDF8C;
+    --amber: #F0B454;
+    --accent: #6FB3FF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── console top bar ─────────────────────────── */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .topbar-in {
+    max-width: 1060px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .topbar .repo { color: var(--muted); }
+  .topbar .repo strong { color: var(--text); font-weight: 500; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line); border-radius: 100px;
+    padding: 3px 12px; color: var(--ok); font-size: 12.5px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+  .dot.amber { background: var(--amber); }
+  .topbar .gh { margin-left: auto; }
+
+  /* ── hero ────────────────────────────────────── */
+  .hero { padding: 72px 0 56px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: clamp(34px, 6vw, 58px); line-height: 1.06;
+    letter-spacing: -0.015em; max-width: 17ch;
+  }
+  h1 .n { color: var(--ok); }
+  .hero p.lede { max-width: 62ch; margin-top: 22px; color: var(--muted); font-size: 17.5px; }
+  .hero p.lede strong { color: var(--text); font-weight: 600; }
+  .statline {
+    margin-top: 30px; display: flex; gap: 28px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--muted);
+  }
+  .statline span b { color: var(--text); font-weight: 500; }
+
+  /* ── sections ────────────────────────────────── */
+  section { padding: 46px 0; border-top: 1px solid var(--line); }
+  h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 26px; letter-spacing: -0.01em; margin-bottom: 8px;
+  }
+  .sec-note { color: var(--muted); max-width: 68ch; margin-bottom: 28px; }
+  .sec-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  /* ── status board (signature) ────────────────── */
+  .tier { margin-bottom: 22px; }
+  .tier-name {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .tier-name::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 10px; }
+  .svc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 13px 15px 12px;
+    opacity: 0; transform: translateY(6px);
+    animation: settle 0.45s ease forwards;
+  }
+  @keyframes settle { to { opacity: 1; transform: none; } }
+  .svc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .svc-name { font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 15.5px; }
+  .svc-role { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .svc-stack {
+    margin-top: 9px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px; color: var(--accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .svc { animation: none; opacity: 1; transform: none; }
+  }
+
+  /* ── pipeline ────────────────────────────────── */
+  .pipe-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .pipe {
+    display: flex; align-items: stretch; gap: 0; min-width: 720px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .pipe .step {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; flex: 1;
+  }
+  .pipe .step .k { color: var(--ok); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .pipe .arrow { display: flex; align-items: center; padding: 0 10px; color: var(--muted); flex: none; }
+  .pipe-note { margin-top: 16px; color: var(--muted); max-width: 68ch; }
+
+  /* ── environments ────────────────────────────── */
+  .envs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .env {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px;
+  }
+  .env .cmd { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--ok); margin-bottom: 8px; display: block; }
+  .env p { color: var(--muted); font-size: 14px; }
+  .callout {
+    margin-top: 22px; border: 1px solid var(--line); border-left: 3px solid var(--amber);
+    border-radius: 8px; background: var(--panel-2); padding: 18px 20px; max-width: 100%;
+  }
+  .callout .tag { color: var(--amber); font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .callout p { color: var(--muted); font-size: 14.5px; max-width: 78ch; }
+  .callout p strong { color: var(--text); }
+
+  /* ── reliability ─────────────────────────────── */
+  .rel { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .rel .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+  .rel h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16.5px; font-weight: 500; margin-bottom: 7px; }
+  .rel p { color: var(--muted); font-size: 14px; }
+  .rel .card .probe { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--accent); display: block; margin-top: 10px; }
+
+  /* ── decisions ───────────────────────────────── */
+  .dec { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 780px) { .dec { grid-template-columns: 1fr; } }
+  .dec .d { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+  .dec h3 { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 500; margin-bottom: 9px; }
+  .dec h3 .q { color: var(--muted); font-weight: 400; }
+  .dec p { color: var(--muted); font-size: 14.5px; }
+  .dec p strong { color: var(--text); }
+
+  /* ── footer ──────────────────────────────────── */
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; }
+  .repos { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 26px; }
+  .repos a {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 13px;
+    color: var(--text); background: var(--panel);
+  }
+  .repos a:hover { border-color: var(--accent); text-decoration: none; color: var(--accent); }
+  .fine { color: var(--muted); font-size: 14px; max-width: 70ch; }
+  .fine a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="repo"><strong>rahb3rt</strong>/platform-architecture</span>
+    <span class="pill"><span class="dot"></span>in production since 2023</span>
+    <a class="gh" href="https://github.com/rahb3rt/platform-architecture">view on github ↗</a>
+  </div>
+</div>
+
+<header class="hero wrap">
+  <p class="eyebrow">Robert Davis — Staff Site Reliability Engineer</p>
+  <h1>One engineer. <span class="n">Fourteen services.</span> Production since 2023.</h1>
+  <p class="lede">This platform runs a real business — customers, payments, field crews, vehicles. I designed it, built every service, and operate it alone: <strong>CI/CD, observability, SLO tracking, backups, and on-call included.</strong> The application code is proprietary; the engineering is documented here.</p>
+  <div class="statline">
+    <span><b>14</b> services</span>
+    <span><b>3+</b> isolated environments</span>
+    <span><b>hourly</b> tenant backups</span>
+    <span><b>1</b> operator</span>
+  </div>
+</header>
+
+<section id="topology">
+  <div class="wrap">
+    <h2>Service topology</h2>
+    <p class="sec-note">Grouped the way the system actually fails: edge, applications, async workers, platform, and hardware in the field.</p>
+
+    <div class="tier">
+      <div class="tier-name">edge</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.05s"><div class="svc-top"><span class="dot"></span><span class="svc-name">nginx</span></div><div class="svc-role">TLS termination and routing for every environment</div><span class="svc-stack">nginx:alpine · generated config</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">applications</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.1s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic; the single source of truth</div><span class="svc-stack">Python · FastAPI · MySQL</span></div>
+        <div class="svc" style="animation-delay:.15s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.2s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.25s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">async &amp; integration</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.3s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms</span></div><div class="svc-role">Two-way customer texting</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.35s"><div class="svc-top"><span class="dot"></span><span class="svc-name">email ingest &amp; send</span></div><div class="svc-role">Inbound parsing and outbound delivery</div><span class="svc-stack">Node</span></div>
+        <div class="svc" style="animation-delay:.4s"><div class="svc-top"><span class="dot"></span><span class="svc-name">transactional mail</span></div><div class="svc-role">Templated customer notifications</div><span class="svc-stack">HTML templating</span></div>
+        <div class="svc" style="animation-delay:.45s"><div class="svc-top"><span class="dot"></span><span class="svc-name">payment reconciliation</span></div><div class="svc-role">Matches external payments to invoices</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.5s"><div class="svc-top"><span class="dot"></span><span class="svc-name">document extraction</span></div><div class="svc-role">Inbound documents to structured data</div><span class="svc-stack">Python</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">platform</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.55s"><div class="svc-top"><span class="dot"></span><span class="svc-name">health aggregator</span></div><div class="svc-role">Auto-discovers containers, probes each on a loop</div><span class="svc-stack">FastAPI · Docker SDK · HTTP/MySQL/TCP</span></div>
+        <div class="svc" style="animation-delay:.6s"><div class="svc-top"><span class="dot"></span><span class="svc-name">monitoring &amp; SLOs</span></div><div class="svc-role">Container stats, logs, alerting, SLO tracking</div><span class="svc-stack">Next.js · RBAC</span></div>
+        <div class="svc" style="animation-delay:.65s"><div class="svc-top"><span class="dot"></span><span class="svc-name">mysql</span></div><div class="svc-role">Primary datastore, per-tenant instances</div><span class="svc-stack">MySQL 8.0</span></div>
+        <div class="svc" style="animation-delay:.7s"><div class="svc-top"><span class="dot"></span><span class="svc-name">minio</span></div><div class="svc-role">S3-compatible object storage</div><span class="svc-stack">MinIO</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">field hardware</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.75s"><div class="svc-top"><span class="dot"></span><span class="svc-name">vehicle telemetry</span></div><div class="svc-role">OBD-II + GPS from trucks; store-and-forward over LTE</div><span class="svc-stack">C++ · ESP32 · Freematics</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="delivery">
+  <div class="wrap">
+    <h2>Delivery</h2>
+    <p class="sec-note">Every service ships the same way. Pull requests build without publishing; version tags cut releases.</p>
+    <div class="pipe-scroll">
+      <div class="pipe">
+        <div class="step"><span class="k">trigger</span>git push / tag v*.*.*</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">build</span>GitHub Actions · Buildx + QEMU<br>amd64 / arm64</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">publish</span>ghcr.io</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">deploy</span>./deploy.sh --env &lt;name&gt;</div>
+      </div>
+    </div>
+    <p class="pipe-note">The deploy step is one idempotent script: it pulls service repos, pre-builds the Next.js apps, generates the nginx config, and brings the stack up under Docker or Podman. Published (genericized) as <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>.</p>
+  </div>
+</section>
+
+<section id="environments">
+  <div class="wrap">
+    <h2>Environments</h2>
+    <p class="sec-note">One host, multiple fully isolated stacks — each environment gets its own env file, network, containers, and volumes. Nothing is shared.</p>
+    <div class="envs">
+      <div class="env"><span class="cmd">./deploy.sh --env production</span><p>The live platform.</p></div>
+      <div class="env"><span class="cmd">./deploy.sh --env staging</span><p>Production-shaped: same compose file, same generated nginx config — drift surfaces here first.</p></div>
+      <div class="env"><span class="cmd">./deploy.sh --env customer-acme</span><p>A dedicated tenant stack: own database, object storage, domain routing, and secrets.</p></div>
+    </div>
+    <div class="callout">
+      <span class="tag"><span class="dot amber"></span>in progress</span>
+      <p><strong>Multi-tenancy as a product.</strong> The per-customer isolation model is growing a control plane — tenant signup, an admin dashboard, and customer self-service — turning a single-business platform into multi-tenant SaaS, one isolated stack per tenant with hourly backups.</p>
+    </div>
+  </div>
+</section>
+
+<section id="reliability">
+  <div class="wrap">
+    <h2>Reliability engineering</h2>
+    <p class="sec-note">The tooling is built in-house, sized to the platform, and runs as part of it.</p>
+    <div class="rel">
+      <div class="card"><h3>Health aggregation</h3><p>A dedicated service discovers containers through the Docker/Podman API and probes each on a background loop. No manual registration, no stale check configs.</p><span class="probe">probes: http · mysql · tcp</span></div>
+      <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets</span></div>
+      <div class="card"><h3>Backups</h3><p>Every tenant stack takes hourly backups of its database and object storage. Restore plus redeploy is the whole disaster-recovery story — by design.</p><span class="probe">hourly · per-tenant</span></div>
+      <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="decisions">
+  <div class="wrap">
+    <h2>Design decisions</h2>
+    <p class="sec-note">The choices interviewers ask about, answered up front.</p>
+    <div class="dec">
+      <div class="d"><h3>Compose, <span class="q">not Kubernetes?</span></h3><p>I operate multi-tenant Kubernetes at day-job scale — which is exactly why this platform doesn't use it. On a single host, Kubernetes buys autoscaling and rolling deploys this system doesn't need, at the price of a control plane to patch and a much larger failure surface to debug alone. <strong>The revisit trigger is explicit: a second host, or a genuine need for zero-downtime rollouts.</strong></p></div>
+      <div class="d"><h3>Build, <span class="q">not buy, for monitoring?</span></h3><p>Hosted observability is priced per-container and per-GB of ingest — for a single-host platform that bill would rival the entire infrastructure budget. The requirements were narrow and Docker-native, and building purpose-fit kept everything on one pane, data on-host, and <strong>SLO tracking implemented the way I practice it professionally.</strong></p></div>
+      <div class="d"><h3>Store-and-forward <span class="q">telemetry?</span></h3><p>Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The SD card is the source of truth; an uploader drains it whenever connectivity allows. <strong>For telemetry, durability beats latency.</strong></p></div>
+      <div class="d"><h3>Per-tenant stacks <span class="q">on one host?</span></h3><p>Staging shaped exactly like production catches configuration drift before customers do, and the same isolation model makes a dedicated customer instance a one-command operation instead of a re-architecture. <strong>Isolation is the product's oldest feature, not a bolt-on.</strong></p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="sec-label">published components</div>
+    <div class="repos">
+      <a href="https://github.com/rahb3rt/platform-architecture">platform-architecture</a>
+      <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>
+      <a href="https://github.com/rahb3rt/container-health-aggregator">container-health-aggregator</a>
+      <a href="https://github.com/rahb3rt/fleet-telemetry">fleet-telemetry</a>
+      <a href="https://github.com/rahb3rt/terraform-aws-static-website">terraform-aws-static-website</a>
+    </div>
+    <p class="fine">The platform has been in continuous production operation since 2023. I'm happy to walk through any component in depth — including code — in an interview. <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
