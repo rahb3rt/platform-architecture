@@ -81,11 +81,17 @@ One deploy system serves multiple **fully isolated environments on the same host
 ./deploy.sh --env customer-acme
 ```
 
+The deploy system is published (genericized) at [compose-multienv-deploy](https://github.com/rahb3rt/compose-multienv-deploy).
+
+**Multi-tenancy as a product.** The per-customer isolation model is evolving into a full control plane: customer signup, an admin dashboard, and customer self-service (site configuration, team management, backups) — turning the platform from a single-business system into multi-tenant SaaS, with each tenant getting an isolated stack (own database, object storage, domain routing, secrets, and hourly backups).
+
 ## Reliability Engineering
 
 **Health aggregation.** A dedicated service auto-discovers containers via the Docker/Podman API and probes each over HTTP, MySQL, or TCP on a background loop — no manual registration, no stale check configs.
 
 **Monitoring & SLOs.** A purpose-built dashboard tracks container metrics, aggregates logs, fires alerts, and tracks SLOs, behind database-backed RBAC.
+
+**Backups.** Every tenant stack takes hourly backups of its database and object storage.
 
 **Design-for-failure at the edge.** The vehicle telemetry firmware assumes connectivity is unreliable and data loss is unacceptable: NDJSON rows persist to SD with size/time-based file rotation, survive reboots, and upload as gzip-compressed batches over LTE with retry and backoff.
 
