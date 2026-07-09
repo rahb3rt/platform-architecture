@@ -124,6 +124,21 @@
     .svc { animation: none; opacity: 1; transform: none; }
   }
 
+  /* ── api surface chips ───────────────────────── */
+  .api-surface { margin-top: 4px; }
+  .asg { margin-bottom: 9px; }
+  .asg strong {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+    display: inline-block; width: 120px; vertical-align: middle;
+  }
+  .asg span {
+    display: inline-block; border: 1px solid var(--line); border-radius: 100px;
+    background: var(--panel); padding: 2px 11px; margin: 2px 4px 2px 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--text);
+  }
+  @media (max-width: 640px) { .asg strong { display: block; width: auto; margin-bottom: 3px; } }
+
   /* ── pipeline ────────────────────────────────── */
   .pipe-scroll { overflow-x: auto; padding-bottom: 6px; }
   .pipe {
@@ -233,7 +248,7 @@
     <div class="tier">
       <div class="tier-name">applications</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic; the single source of truth</div><span class="svc-stack">Python · FastAPI · MySQL</span></div>
+        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic — 60 domains, 520 endpoints; the single source of truth</div><span class="svc-stack">Python · Flask · MySQL</span></div>
         <div class="svc" style="animation-delay:.06s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
         <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
         <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
@@ -273,9 +288,9 @@
 <section id="dataflow">
   <div class="wrap">
     <h2>Data flow</h2>
-    <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed is observability.</p>
+    <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed gray is observability, and the <span style="color:var(--amber)">amber boundary</span> is one tenant stack — everything inside it is replicated per tenant.</p>
     <div style="overflow-x:auto">
-    <svg viewBox="0 0 960 530" role="img" aria-label="Data-flow diagram: users through nginx to the frontends and core API; async workers and field vehicles feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
+    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to three frontends and a core API with 60 domains and 520 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
       <defs>
         <marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FDF8C"/></marker>
         <marker id="m-ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6FB3FF"/></marker>
@@ -283,92 +298,114 @@
       <style>
         .dg-t { font-family:'Space Grotesk',sans-serif; font-size:13.5px; fill:#D7E1EE; font-weight:500; text-anchor:middle; }
         .dg-s { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#7E8EA6; text-anchor:middle; }
+        .dg-f { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#9FB3CC; text-anchor:middle; }
         .dg-r { font-family:'IBM Plex Mono',monospace; font-size:11px; fill:#AFC0D6; }
         .dg-g { font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:#7E8EA6; letter-spacing:1.5px; text-anchor:middle; }
-        .dg-lb { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#6FB3FF; }
+        .dg-a { font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:#F0B454; letter-spacing:1px; }
+        .dg-am { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#7E8EA6; }
+        .dg-lb { font-family:'IBM Plex Mono',monospace; font-size:9.5px; fill:#6FB3FF; }
         .dg-fl { stroke:#3FDF8C; stroke-width:1.4; fill:none; }
         .dg-fd { stroke:#6FB3FF; stroke-width:1.4; fill:none; }
         .dg-pr { stroke:#7E8EA6; stroke-width:1.2; fill:none; stroke-dasharray:4 5; opacity:.7; }
       </style>
 
-      <!-- users -->
+      <!-- tenant boundary -->
+      <rect x="16" y="96" width="928" height="580" rx="10" fill="none" stroke="#F0B454" stroke-dasharray="6 6" opacity="0.45"/>
+      <text class="dg-a" x="28" y="118">ISOLATED TENANT STACK · ×N</text>
+      <text class="dg-am" x="932" y="118" text-anchor="end">own network · database · objects · secrets</text>
+
+      <!-- outside: users + vehicles -->
       <rect x="390" y="18" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
       <text class="dg-t" x="480" y="38">users</text>
       <text class="dg-s" x="480" y="54">web · kiosk · phone</text>
-
-      <!-- field vehicles -->
       <rect x="760" y="18" width="180" height="58" rx="8" fill="#161F2E" stroke="#24344A"/>
       <text class="dg-t" x="850" y="41">field vehicles</text>
       <text class="dg-s" x="850" y="58">esp32 · obd-ii · gps</text>
 
       <!-- nginx -->
-      <rect x="390" y="92" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="480" y="112">nginx</text>
-      <text class="dg-s" x="480" y="128">tls · routing</text>
+      <rect x="390" y="140" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="160">nginx</text>
+      <text class="dg-s" x="480" y="176">tls · routing</text>
 
       <!-- frontends -->
-      <rect x="170" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="260" y="186">public website</text>
-      <text class="dg-s" x="260" y="202">next.js</text>
-      <rect x="390" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="480" y="186">operations app</text>
-      <text class="dg-s" x="480" y="202">next.js</text>
-      <rect x="610" y="166" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="700" y="186">kiosk</text>
-      <text class="dg-s" x="700" y="202">typescript</text>
+      <rect x="170" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="260" y="234">public website</text>
+      <text class="dg-s" x="260" y="250">next.js</text>
+      <rect x="390" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="234">operations app</text>
+      <text class="dg-s" x="480" y="250">next.js</text>
+      <rect x="610" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="700" y="234">kiosk</text>
+      <text class="dg-s" x="700" y="250">typescript</text>
 
-      <!-- core api -->
-      <rect x="390" y="248" width="180" height="54" rx="8" fill="#161F2E" stroke="#3A557A"/>
-      <text class="dg-t" x="480" y="271">core api</text>
-      <text class="dg-s" x="480" y="288">fastapi · source of truth</text>
+      <!-- core api (expanded) -->
+      <rect x="220" y="300" width="520" height="128" rx="8" fill="#161F2E" stroke="#3A557A"/>
+      <text class="dg-t" x="480" y="324" style="font-size:15px">core api</text>
+      <text class="dg-s" x="480" y="341">flask · 60 domains · 520 endpoints · source of truth</text>
+      <line x1="244" y1="352" x2="716" y2="352" stroke="#24344A"/>
+      <text class="dg-f" x="480" y="373">invoicing · payments · statements · quotes · contracts + e-sign</text>
+      <text class="dg-f" x="480" y="392">jobs · scheduling · route optimization · crews · timeclock · payroll</text>
+      <text class="dg-f" x="480" y="411">messaging · marketing · telemetry ingest · insights · rbac · webhooks</text>
+
+      <!-- workers -->
+      <rect x="20" y="300" width="170" height="200" rx="8" fill="#121A27" stroke="#24344A"/>
+      <text class="dg-g" x="105" y="324">ASYNC WORKERS</text>
+      <text class="dg-r" x="36" y="350">sms</text>
+      <text class="dg-r" x="36" y="374">email ingest</text>
+      <text class="dg-r" x="36" y="398">transactional mail</text>
+      <text class="dg-r" x="36" y="422">payment recon</text>
+      <text class="dg-r" x="36" y="446">doc extraction</text>
 
       <!-- stores -->
-      <rect x="300" y="346" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="380" y="366">mysql</text>
-      <text class="dg-s" x="380" y="382">per-tenant</text>
-      <rect x="500" y="346" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="580" y="366">minio</text>
-      <text class="dg-s" x="580" y="382">s3 objects</text>
-
-      <!-- workers group -->
-      <rect x="20" y="210" width="250" height="172" rx="8" fill="#121A27" stroke="#24344A"/>
-      <text class="dg-g" x="145" y="234">ASYNC WORKERS</text>
-      <text class="dg-r" x="40" y="260">sms</text>
-      <text class="dg-r" x="40" y="284">email ingest &amp; send</text>
-      <text class="dg-r" x="40" y="308">transactional mail</text>
-      <text class="dg-r" x="40" y="332">payment reconciliation</text>
-      <text class="dg-r" x="40" y="356">document extraction</text>
+      <rect x="280" y="470" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="370" y="490">mysql</text>
+      <text class="dg-s" x="370" y="506">per-tenant</text>
+      <rect x="500" y="470" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="590" y="490">minio</text>
+      <text class="dg-s" x="590" y="506">s3 objects</text>
 
       <!-- observability -->
-      <rect x="20" y="440" width="300" height="56" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="170" y="463">health + monitoring</text>
-      <text class="dg-s" x="170" y="480">auto-discovery · slo tracking</text>
+      <rect x="20" y="560" width="300" height="56" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="170" y="583">health + monitoring</text>
+      <text class="dg-s" x="170" y="600">auto-discovery · slo tracking</text>
 
-      <!-- request path (green) -->
-      <path class="dg-fl" d="M480,64 L480,88" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M480,138 L480,162" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M458,138 L276,162" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M502,138 L684,162" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M260,212 L444,245" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M480,212 L480,244" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M700,212 L516,245" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M270,288 L386,278" marker-end="url(#m-ok)"/>
+      <!-- request path -->
+      <path class="dg-fl" d="M480,64 L480,136" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M480,186 L480,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M458,186 L266,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M502,186 L694,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M260,260 L260,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M480,260 L480,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M700,260 L700,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M190,364 L216,364" marker-end="url(#m-ok)"/>
 
-      <!-- data + telemetry (blue) -->
-      <path class="dg-fd" d="M450,302 L388,342" marker-end="url(#m-ac)"/>
-      <path class="dg-fd" d="M510,302 L572,342" marker-end="url(#m-ac)"/>
-      <path class="dg-fd" d="M850,76 L850,276 L576,276" marker-end="url(#m-ac)"/>
-      <text class="dg-lb" x="858" y="168">store-and-forward</text>
-      <text class="dg-lb" x="858" y="182">gzip over lte</text>
+      <!-- data + telemetry -->
+      <path class="dg-fd" d="M370,428 L370,466" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M590,428 L590,466" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M850,76 L850,364 L744,364" marker-end="url(#m-ac)"/>
+      <text class="dg-lb" x="858" y="230">store-and-forward</text>
+      <text class="dg-lb" x="858" y="244">gzip over lte</text>
 
-      <!-- probes (dashed) -->
-      <path class="dg-pr" d="M320,468 L930,468"/>
-      <text class="dg-s" x="630" y="459">http · mysql · tcp probes — every service, every environment</text>
-      <path class="dg-pr" d="M380,468 L380,396"/>
-      <path class="dg-pr" d="M580,468 L580,396"/>
-      <path class="dg-pr" d="M480,468 L480,306"/>
-      <path class="dg-pr" d="M145,440 L145,386"/>
+      <!-- probes -->
+      <path class="dg-pr" d="M320,588 L930,588"/>
+      <text class="dg-s" x="630" y="579">http · mysql · tcp probes — every service, every environment</text>
+      <path class="dg-pr" d="M370,588 L370,520"/>
+      <path class="dg-pr" d="M590,588 L590,520"/>
+      <path class="dg-pr" d="M480,588 L480,432"/>
+      <path class="dg-pr" d="M105,560 L105,504"/>
     </svg>
+    </div>
+
+    <div class="sec-label" style="margin-top:30px">core api surface — 60 route domains · 520 endpoints</div>
+    <div class="api-surface">
+      <div class="asg"><strong>billing</strong><span>invoicing</span><span>payments</span><span>payment methods</span><span>statements</span><span>quotes</span><span>customer credit</span><span>expenses</span></div>
+      <div class="asg"><strong>contracts</strong><span>templates</span><span>e-signing</span><span>audit trail</span></div>
+      <div class="asg"><strong>crm</strong><span>customers</span><span>properties</span><span>leads</span><span>requests</span><span>sites</span></div>
+      <div class="asg"><strong>workforce</strong><span>employees</span><span>teams</span><span>timeclock</span><span>timecards</span><span>time-off</span><span>payroll</span></div>
+      <div class="asg"><strong>operations</strong><span>jobs</span><span>scheduling</span><span>calendar</span><span>route optimization</span><span>mowing</span><span>plowing plans</span><span>service plans</span></div>
+      <div class="asg"><strong>comms</strong><span>messaging</span><span>notifications</span><span>marketing campaigns</span><span>social</span></div>
+      <div class="asg"><strong>field &amp; assets</strong><span>vehicle telemetry</span><span>assets</span><span>access devices</span><span>access events</span><span>weather</span></div>
+      <div class="asg"><strong>platform</strong><span>auth</span><span>rbac roles</span><span>orgs</span><span>dashboards</span><span>reports</span><span>insights</span><span>webhook deliveries</span></div>
     </div>
   </div>
 </section>

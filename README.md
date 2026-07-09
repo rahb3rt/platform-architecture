@@ -54,7 +54,7 @@ flowchart TB
 
 | Service | Role | Stack |
 |---|---|---|
-| Core API | Business logic, single source of truth | Python, FastAPI, MySQL |
+| Core API | Business logic — 60 route domains, 520 endpoints | Python, Flask, MySQL |
 | Public website | Customer-facing site | Next.js |
 | Operations dashboard | Internal operations app | Next.js |
 | Kiosk | On-site self-service | TypeScript |
