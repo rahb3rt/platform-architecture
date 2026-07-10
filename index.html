@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Platform Architecture — Robert Davis</title>
-<meta name="description" content="One engineer. Fourteen services. Production since 2023. Architecture of a solo-built, solo-operated production platform.">
+<meta name="description" content="One engineer. Fifteen services. Production since 2023. Architecture of a solo-built, solo-operated production platform.">
 <meta property="og:title" content="Platform Architecture — Robert Davis">
-<meta property="og:description" content="One engineer. Fourteen services. Production since 2023.">
+<meta property="og:description" content="One engineer. Fifteen services. Production since 2023.">
 <meta property="og:image" content="https://rahb3rt.github.io/platform-architecture/og.png">
 <meta property="og:url" content="https://rahb3rt.github.io/platform-architecture/">
 <meta name="twitter:card" content="summary_large_image">
@@ -222,10 +222,10 @@
 
 <header class="hero wrap">
   <p class="eyebrow">Robert Davis — Staff Site Reliability Engineer</p>
-  <h1>One engineer. <span class="n">Fourteen services.</span> Production since 2023.</h1>
+  <h1>One engineer. <span class="n">Fifteen services.</span> Production since 2023.</h1>
   <p class="lede">This platform runs a real business — customers, payments, field crews, vehicles. I designed it, built every service, and operate it alone: <strong>CI/CD, observability, SLO tracking, backups, and on-call included.</strong> The application code is proprietary; the engineering is documented here.</p>
   <div class="statline">
-    <span><b>14</b> services</span>
+    <span><b>15</b> services</span>
     <span><b>16,000+</b> jobs scheduled</span>
     <span><b>5,100+</b> invoices processed</span>
     <span><b>58,000+</b> telemetry readings</span>
@@ -252,6 +252,7 @@
         <div class="svc" style="animation-delay:.06s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
         <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
         <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
+        <div class="svc" style="animation-delay:.12s"><div class="svc-top"><span class="dot"></span><span class="svc-name">customer portal</span></div><div class="svc-role">Balance, invoices, next visit, service requests — magic-link sign-in, no passwords</div><span class="svc-stack">Next.js 15 · passwordless JWT</span></div>
       </div>
     </div>
 
@@ -290,7 +291,7 @@
     <h2>Data flow</h2>
     <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed gray is observability, and the <span style="color:var(--amber)">amber boundary</span> is one tenant stack — everything inside it is replicated per tenant.</p>
     <div style="overflow-x:auto">
-    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to three frontends and a core API with 60 domains and 520 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
+    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to four frontends and a core API with 60 domains and 520 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
       <defs>
         <marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FDF8C"/></marker>
         <marker id="m-ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6FB3FF"/></marker>
@@ -328,15 +329,18 @@
       <text class="dg-s" x="480" y="176">tls · routing</text>
 
       <!-- frontends -->
-      <rect x="170" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="260" y="234">public website</text>
-      <text class="dg-s" x="260" y="250">next.js</text>
-      <rect x="390" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="480" y="234">operations app</text>
-      <text class="dg-s" x="480" y="250">next.js</text>
-      <rect x="610" y="214" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
-      <text class="dg-t" x="700" y="234">kiosk</text>
-      <text class="dg-s" x="700" y="250">typescript</text>
+      <rect x="60" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="140" y="234">public website</text>
+      <text class="dg-s" x="140" y="250">next.js</text>
+      <rect x="280" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="360" y="234">operations app</text>
+      <text class="dg-s" x="360" y="250">next.js</text>
+      <rect x="500" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="580" y="234">kiosk</text>
+      <text class="dg-s" x="580" y="250">typescript</text>
+      <rect x="720" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="800" y="234">customer portal</text>
+      <text class="dg-s" x="800" y="250">magic-link · next.js</text>
 
       <!-- core api (expanded) -->
       <rect x="220" y="300" width="520" height="128" rx="8" fill="#161F2E" stroke="#3A557A"/>
@@ -371,20 +375,22 @@
 
       <!-- request path -->
       <path class="dg-fl" d="M480,64 L480,136" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M480,186 L480,210" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M458,186 L266,210" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M502,186 L694,210" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M260,260 L260,296" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M480,260 L480,296" marker-end="url(#m-ok)"/>
-      <path class="dg-fl" d="M700,260 L700,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M452,186 L146,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M470,186 L366,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M490,186 L574,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M508,186 L794,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M140,260 L246,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M360,260 L360,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M580,260 L580,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M800,260 L714,296" marker-end="url(#m-ok)"/>
       <path class="dg-fl" d="M190,364 L216,364" marker-end="url(#m-ok)"/>
 
       <!-- data + telemetry -->
       <path class="dg-fd" d="M370,428 L370,466" marker-end="url(#m-ac)"/>
       <path class="dg-fd" d="M590,428 L590,466" marker-end="url(#m-ac)"/>
-      <path class="dg-fd" d="M850,76 L850,364 L744,364" marker-end="url(#m-ac)"/>
-      <text class="dg-lb" x="858" y="230">store-and-forward</text>
-      <text class="dg-lb" x="858" y="244">gzip over lte</text>
+      <path class="dg-fd" d="M905,76 L905,364 L744,364" marker-end="url(#m-ac)"/>
+      <text class="dg-lb" x="898" y="150" text-anchor="end">store-and-forward</text>
+      <text class="dg-lb" x="898" y="164" text-anchor="end">gzip over lte</text>
 
       <!-- probes -->
       <path class="dg-pr" d="M320,588 L930,588"/>
@@ -489,6 +495,7 @@
       <div class="card"><h3>Secrets out of band</h3><p>Credentials live in per-environment env files injected at deploy time — never in images, never in git. Each environment holds only its own.</p><span class="probe">per-env injection · nothing in images</span></div>
       <div class="card"><h3>TLS at the edge</h3><p>Every stack fronts through its own edge proxy with TLS termination; certificates are provisioned and renewed automatically.</p><span class="probe">auto-provisioned certs</span></div>
       <div class="card"><h3>AuthN/AuthZ</h3><p>Database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.</p><span class="probe">rbac · sessions · token revocation</span></div>
+      <div class="card"><h3>Passwordless customers</h3><p>The customer portal has no passwords to steal: sign-in is a 15-minute magic link over SMS. The request endpoint answers identically for any input and is rate-limited, so it can't be used to probe who is a customer. Sessions are stateless JWTs — rotating one secret revokes everything.</p><span class="probe">magic links · enumeration-proof · rate-limited</span></div>
     </div>
   </div>
 </section>

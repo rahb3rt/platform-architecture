@@ -4,9 +4,9 @@
 
 **▶ Interactive version: [rahb3rt.github.io/platform-architecture](https://rahb3rt.github.io/platform-architecture/)**
 
-This document describes the architecture of a production platform I designed, built, and operate end-to-end: 14 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment. The application code is proprietary (it runs my company); this repo documents the engineering.
+This document describes the architecture of a production platform I designed, built, and operate end-to-end: 15 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment. The application code is proprietary (it runs my company); this repo documents the engineering.
 
-**By the numbers:** 14 services · 16,000+ jobs scheduled · 5,100+ invoices processed · 58,000+ vehicle telemetry readings · hourly per-tenant backups · 1 operator. Counts are `SELECT COUNT(*)` aggregates from the production database.
+**By the numbers:** 15 services · 16,000+ jobs scheduled · 5,100+ invoices processed · 58,000+ vehicle telemetry readings · hourly per-tenant backups · 1 operator. Counts are `SELECT COUNT(*)` aggregates from the production database.
 
 ---
 
@@ -22,6 +22,7 @@ flowchart TB
         WEB[Public website<br/>Next.js]
         APP[Operations dashboard<br/>Next.js]
         KIOSK[On-site kiosk<br/>TypeScript]
+        PORTAL[Customer portal<br/>Next.js · magic-link auth]
         API[Core API<br/>Python / FastAPI]
     end
 
@@ -44,7 +45,7 @@ flowchart TB
         TELEM[Vehicle telemetry<br/>ESP32 / OBD-II / GPS / LTE]
     end
 
-    NGINX --> WEB & APP & KIOSK & API
+    NGINX --> WEB & APP & KIOSK & PORTAL & API
     API --> MYSQL & MINIO
     SMS & EMAIL & MAIL & PAY & EXTRACT --> API
     TELEM -->|gzip NDJSON over LTE| API
@@ -60,6 +61,7 @@ flowchart TB
 | Public website | Customer-facing site | Next.js |
 | Operations dashboard | Internal operations app | Next.js |
 | Kiosk | On-site self-service | TypeScript |
+| Customer portal | Balance, invoices, next visit, service requests | Next.js 15, passwordless magic-link auth |
 | SMS / Email / Mail | Customer messaging (inbound + outbound) | Python, Node |
 | Payment reconciliation | Matches external payments to invoices | Python |
 | Document extraction | Parses inbound documents into structured data | Python |
@@ -136,6 +138,7 @@ jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
 - **Isolation by default** — every tenant stack gets its own network, database, object storage, and secrets; there is no shared state to leak across.
 - **Secrets out of band** — credentials live in per-environment env files injected at deploy time, never in images or git.
 - **TLS at the edge** — each stack fronts through its own edge proxy with TLS termination; certificates auto-provisioned and renewed.
+- **Passwordless customers** — portal sign-in is a 15-minute magic link over SMS; the request endpoint is enumeration-proof and rate-limited, sessions are stateless JWTs revocable by one secret rotation.
 - **AuthN/AuthZ** — database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.
 
 ## Design Decisions
