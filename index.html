@@ -165,8 +165,11 @@
     border-radius: 8px; background: var(--panel-2); padding: 18px 20px; max-width: 100%;
   }
   .callout .tag { color: var(--amber); font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.ok .tag { color: var(--ok); }
   .callout p { color: var(--muted); font-size: 14.5px; max-width: 78ch; }
   .callout p strong { color: var(--text); }
+  .callout p code { font-family: 'IBM Plex Mono', monospace; font-size: 0.92em; color: var(--accent); }
 
   /* ── reliability ─────────────────────────────── */
   .rel { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
@@ -428,25 +431,54 @@
         <div class="arrow">→</div>
         <div class="step"><span class="k">publish</span>ghcr.io</div>
         <div class="arrow">→</div>
-        <div class="step"><span class="k">deploy</span>./deploy.sh --env &lt;name&gt;</div>
+        <div class="step"><span class="k">deploy</span>stackctl deploy &lt;env&gt;</div>
       </div>
     </div>
-    <p class="pipe-note">The deploy step is one idempotent script: it pulls service repos, pre-builds the Next.js apps, generates the nginx config, and brings the stack up under Docker or Podman. Published (genericized) as <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>.</p>
+    <p class="pipe-note">The deploy step is one idempotent tool: it pulls service repos, pre-builds the Next.js apps, provisions per-environment infrastructure, regenerates the edge routes, and brings the stack up under Docker or Podman — rebuilding only the services whose commit SHA actually moved. Backend images are built once per SHA and shared across every stack; the Next.js frontends bake per-environment branding at build time, so those build per stack. The genericized form is published as <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>.</p>
   </div>
 </section>
 
 <section id="environments">
   <div class="wrap">
-    <h2>Environments</h2>
-    <p class="sec-note">One host, multiple fully isolated stacks — each environment gets its own env file, network, containers, and volumes. Nothing is shared.</p>
-    <div class="envs">
-      <div class="env"><span class="cmd">./deploy.sh --env production</span><p>The live platform.</p></div>
-      <div class="env"><span class="cmd">./deploy.sh --env staging</span><p>Production-shaped: same compose file, same generated nginx config — drift surfaces here first.</p></div>
-      <div class="env"><span class="cmd">./deploy.sh --env customer-acme</span><p>A dedicated tenant stack: own database, object storage, domain routing, and secrets.</p></div>
+    <h2>Multi-environment deployment</h2>
+    <p class="sec-note">One host, N fully isolated stacks. Each gets its own network, its own MySQL server, its own object storage, its own secrets, and its own domain routes — nothing in the data path is shared between environments. The single shared component is one Caddy edge that terminates TLS and routes by hostname; every stack attaches its own routes at deploy time.</p>
+
+    <div class="tier">
+      <div class="tier-name">one mechanism · differently named</div>
+      <div class="envs">
+        <div class="env"><span class="cmd">stackctl deploy production</span><p>The live platform.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy staging</span><p>Production-shaped — same tooling, same generated edge config. Configuration drift surfaces here first, not in front of customers.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy acme</span><p>A dedicated customer stack: own database, object storage, domain routing, and secrets. Standing one up is one command, not a re-architecture.</p></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">stackctl · the deploy layer</div>
+      <div class="envs">
+        <div class="env"><span class="cmd">stackctl new acme --domain acmelawns.com</span><p>Provisions an environment end to end: network, database, object storage, generated secrets, routes. The schema is seeded from the API repo's checked-in SQL and tracked by a marker table, so re-running provisioning is safe.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy acme</span><p>Rebuilds only the services whose repo SHA moved; already-built SHAs deploy from cache. Services resolve each other by container DNS, so deploy order is irrelevant.</p></div>
+        <div class="env"><span class="cmd">stackctl rollback acme api</span><p>Re-runs the previously recorded image for one service, in one environment only.</p></div>
+        <div class="env"><span class="cmd">stackctl backup acme</span><p>Gzipped dump of both of the stack's databases with drop-and-create semantics. Newest 72 retained — roughly three days of hourly backups.</p></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">control plane · the tenant layer</div>
+      <div class="rel">
+        <div class="card"><h3>Signup → workspace</h3><p>A customer claims a name and gets a full isolated stack at <em>name</em>.<em>base-domain</em>, on wildcard DNS, with certificates issued automatically on first deploy.</p><span class="probe">node · express · react spa</span></div>
+        <div class="card"><h3>Dispatch board</h3><p>Every stack as a grid, one cell per service, with live status, the tenant list, and a job queue that streams deploy logs as they run.</p><span class="probe">jobs run one at a time</span></div>
+        <div class="card"><h3>Tenant security</h3><p>Owner and member roles, expiring invitations, and a per-tenant audit log.</p><span class="probe">rbac · audit trail</span></div>
+        <div class="card"><h3>Billing &amp; licensing</h3><p>Subscription plans with entitlements from Community to Enterprise, annual terms and add-ons, plus Ed25519-signed licenses enforced at the stack level for self-hosted installs.</p><span class="probe">ed25519 · signed licenses</span></div>
+      </div>
+    </div>
+
+    <div class="callout ok">
+      <span class="tag"><span class="dot"></span>shipped</span>
+      <p><strong>The control plane never reimplements deploy logic.</strong> Every state change shells out to the same <code>stackctl</code> I run by hand, and status is read back from its registry plus one container-engine query. A second implementation of "what does deployed mean" is a guarantee that the dashboard and the CLI will eventually disagree — usually mid-incident, when the dashboard is the thing you're trusting.</p>
     </div>
     <div class="callout">
-      <span class="tag"><span class="dot amber"></span>in progress</span>
-      <p><strong>Multi-tenancy as a product.</strong> The per-customer isolation model is growing a control plane — tenant signup, an admin dashboard, and customer self-service — turning a single-business platform into multi-tenant SaaS, one isolated stack per tenant with hourly backups.</p>
+      <span class="tag"><span class="dot amber"></span>the trade</span>
+      <p><strong>Shared-nothing costs RAM.</strong> A full MySQL and object store per environment buys a blast radius that stops at one stack, and pays for it in memory and disk. That's the right trade while stack count is small; it is explicitly the thing to revisit before it isn't. For the same reason self-service provisioning is gated by default — an anonymous form that instantly consumes a stack's worth of resources is a denial-of-wallet vector, so signups queue for approval unless they're gated upstream.</p>
     </div>
   </div>
 </section>
@@ -458,7 +490,7 @@
     <div class="rel">
       <div class="card"><h3>Health aggregation</h3><p>A dedicated service discovers containers through the Docker/Podman API and probes each on a background loop. No manual registration, no stale check configs.</p><span class="probe">probes: http · mysql · tcp</span></div>
       <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets</span></div>
-      <div class="card"><h3>Backups</h3><p>Every tenant stack takes hourly backups of its database and object storage. Restore plus redeploy is the whole disaster-recovery story — by design.</p><span class="probe">hourly · per-tenant</span></div>
+      <div class="card"><h3>Backups</h3><p>The control-plane process drives hourly per-tenant database backups — one gzipped dump of a stack's business and monitoring schemas, written drop-and-create so a restore rebuilds them whole, and pruned to the newest 72. Restore plus redeploy is the entire disaster-recovery story, by design.</p><span class="probe">hourly · per-tenant · 72 kept</span></div>
       <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte</span></div>
     </div>
   </div>
