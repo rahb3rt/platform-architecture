@@ -6,7 +6,7 @@
 
 This document describes the architecture of a production platform I designed, built, and operate end-to-end: 15 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment behind a self-service control plane. The application code is proprietary (it runs my company); this repo documents the engineering.
 
-**By the numbers:** 15 services · 16,000+ jobs scheduled · 5,100+ invoices processed · 58,000+ vehicle telemetry readings · hourly per-tenant backups · 1 operator. Counts are `SELECT COUNT(*)` aggregates from the production database.
+**By the numbers:** 15 services · 17,000+ jobs scheduled · 5,200+ invoices processed · 100,000+ vehicle telemetry readings · hourly per-tenant backups · 1 operator. Counts are `SELECT COUNT(*)` aggregates from the production database.
 
 ---
 
@@ -45,10 +45,17 @@ flowchart TB
         TELEM[Vehicle telemetry<br/>ESP32 / OBD-II / GPS / LTE]
     end
 
+    subgraph ext [External APIs]
+        OPENAI[OpenAI<br/>vision captioning]
+        META[Meta Graph<br/>social publish + insights]
+        GBPX[Google Business Profile<br/>local posts]
+    end
+
     NGINX --> WEB & APP & KIOSK & PORTAL & API
     API --> MYSQL & MINIO
     SMS & EMAIL & MAIL & PAY & EXTRACT --> API
     TELEM -->|gzip NDJSON over LTE| API
+    API --> OPENAI & META & GBPX
     HEALTH -.->|HTTP / MySQL / TCP probes| apps & workers & platform
     MON -.->|container stats, logs, SLOs| apps & workers & platform
 ```
@@ -80,11 +87,23 @@ The core API is a Flask monolith-by-choice: **60 route domains, 520 endpoints**,
 | Billing | invoicing, payments, payment methods, statements, quotes, customer credit, expenses |
 | Contracts | templates, e-signing, audit trail |
 | CRM | customers, properties, leads, requests, sites |
-| Workforce | employees, teams, timeclock, timecards, time-off, payroll |
+| Workforce | employees, teams, geofenced timeclock (both punch directions), timecards with punch-linked integrity, time-off, payroll |
 | Operations | jobs, scheduling, calendar, route optimization, mowing, plowing plans, service plans |
-| Communications | messaging, notifications, marketing campaigns, social |
+| Communications | messaging, notifications, marketing campaigns, AI social publishing (vision captioning, autopilot scheduling, multi-platform publish, engagement insights) |
 | Field & assets | vehicle telemetry, assets, access devices, access events, weather |
 | Platform | auth, RBAC roles, orgs, dashboards, reports, insights, webhook deliveries |
+
+## AI-Assisted Publishing (closed loop)
+
+The social subsystem is a small production case study in operating an LLM feature end-to-end:
+
+- **Vision captioning with structured outputs.** Each photo is captioned by a vision call constrained to a JSON schema (title / caption / hashtags), with the caption contract — contact line placement, hashtag count and casing — enforced in code rather than trusted to the model.
+- **Style rotation, measured.** Captions commit to one of a set of rotating engagement "angles"; every generated caption records which angle produced it. Publishing stores the resulting platform post ids, and an insights endpoint batch-fetches engagement from the Graph API and rolls it up **per angle** — so the prompt styles are judged by results, not vibes.
+- **Prompts are data.** All prompts, style lists, and posting parameters live in a settings table (system defaults seeded and refreshed from code, owner overrides stored beside them). Tuning the voice never requires a deploy.
+- **Server-enforced scheduling constraints.** One post per business-timezone calendar day, enforced at create/update and inside the autopilot allocator — conflicts slide forward and the API's response says why the date moved.
+- **Rate-limit-aware caching.** Third-party feeds are layered: browser persistence paints instantly, a server-side TTL cache absorbs passive traffic, and an explicit refresh is the only real upstream fetch — with a floor so even button-mashing can't burn the API quota.
+- **Failure surfacing.** Publish failures, OAuth tokens flipped to needs-reconnect *before* expiry, and new-comment deltas all flow into the app's notification stream via an event table — piggybacked on the publisher's existing cadence, costing no extra polling.
+- **Media normalization at the door.** Phone uploads (HEIC/AVIF) are decoded — WASM for the patent-encumbered codec — and re-encoded to platform-safe JPEG at upload; serving goes through on-the-fly WebP thumbnails with immutable cache headers.
 
 ## CI/CD
 
@@ -148,9 +167,11 @@ The earlier single-business deploy script is still in the tree, untouched, as th
 
 **Backups.** The control-plane process drives hourly per-tenant backups: one gzipped dump of both of a stack's databases (business + monitoring), written with drop-and-create semantics so a restore fully reconstructs them, mode-600 because the file is the whole dataset, and pruned to the newest 72 (~3 days). Restores are explicitly destructive and require typed confirmation.
 
+**Deploy preflight.** The deploy path verifies the core datastores (MySQL, object storage) are running before any service swap — starting them if stopped, aborting the deploy if they won't come up — because deploying against a down datastore bakes dead endpoints into every rebuilt container's environment.
+
 **Design-for-failure at the edge.** The vehicle telemetry firmware assumes connectivity is unreliable and data loss is unacceptable: NDJSON rows persist to SD with size/time-based file rotation, survive reboots, and upload as gzip-compressed batches over LTE with retry and backoff.
 
-## A Failure, on the Record
+## Failures, on the Record
 
 **Postmortem — June 2026 — "The observer effect."** The monitoring dashboard gained a live topology view (container stats, sparklines, request traces) on top of its real-user-monitoring ingest. The monitoring database lives on the same MySQL server as production, and within hours the topology view was timing out — every timeout representing load pressure on the database that also serves the business.
 
@@ -165,6 +186,14 @@ jun 08  d4ce6c3  Revert "Fix topology timeout: parallelize all DB queries and tr
 jun 08  9036fc7  Fix topology timeout: reduce query limits safely
 jun 08  b743295  Fix topology timeouts: slower polling, fewer trace fetches
 jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
+```
+
+**Postmortem — August 2026 — "The build that lied."** An image-processing dependency shipped its native binaries as optional packages carrying a `node >= 20.9` engines constraint; the runtime image ran Node 18. npm skips engine-mismatched optional dependencies **silently** — so the image built green and the container came up healthy, but the first `require()` at request time threw, and every image the dashboard serves returned a 500 through the framework's generic error page.
+
+Diagnosis came from the outside in: sibling routes sharing every import *except* the image library answered clean JSON errors, isolating the failing module without a shell on the box. The fix was one line (bump the runtime to Node 20); the finding was not: **a green build proves the dependency graph resolved, not that it can load.** Engines mismatches on optional dependencies are a silent runtime landmine — the class of failure that only surfaces in production, on the first request.
+
+```
+aug 25  8700923  Bump runtime image to node:20-alpine for sharp 0.35
 ```
 
 ## Security Posture
@@ -184,6 +213,8 @@ jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
 **Store-and-forward telemetry.** Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The firmware treats the SD card as the source of truth — every reading lands on disk as NDJSON before anything else, files rotate by size and time, and an uploader drains them as gzip-compressed batches with retry and backoff whenever connectivity allows. For telemetry, durability beats latency: a reading that arrives ten minutes late is fine; one that never arrives is not.
 
 **Per-environment isolation on one host.** Production, staging, and dedicated customer instances run side by side, each with its own env file, network, containers, database, and volumes — one mechanism, differently named. The cost is honest: shared-nothing per environment means a full MySQL and object store per stack, which trades RAM and disk for a blast radius that stops at one environment — the right trade while stack count is small, and the thing to revisit before it isn't.
+
+**Prompts as data, not code.** The AI publishing prompts, style rotations, and posting parameters live in the database with code-seeded defaults and owner overrides side by side. Prompt tuning is the highest-frequency change in the subsystem; making it a deploy would either freeze iteration or turn every voice tweak into a release. The trade is a settings table and a seeding pass at startup — cheap — against a feedback loop (angle-level engagement metrics) that can actually be acted on the same day.
 
 **One source of truth for deploys.** The control plane could have talked to the container engine directly and been faster to build. Instead every state change shells out to the same `stackctl` I use by hand, and status is read back from its registry. A second implementation of "what does deployed mean" is a guarantee that the UI and the CLI will eventually disagree — usually during an incident, when the dashboard is the thing you're trusting. Shelling out costs a process spawn; disagreeing costs the outage.
 
