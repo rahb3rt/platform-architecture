@@ -166,7 +166,7 @@
 <div class="titleblock">
   <h1>Anatomy of a Solo-Operated Production Microservice Platform</h1>
   <div class="authors"><span class="sc">Robert Davis</span></div>
-  <div class="affil">Staff Site Reliability Engineer — independent production systems</div>
+  <div class="affil">Architect, builder, and sole operator of the system described</div>
   <div class="pdate">In continuous production since 2023 · Revised August 26, 2026</div>
 </div>
 
@@ -183,49 +183,59 @@
 <p>The platform comprises fifteen services grouped the way the system actually fails: an edge tier, application services, asynchronous workers, platform services, and hardware in the field. Figure&nbsp;1 shows the topology; Table&nbsp;1 the inventory.</p>
 
 <figure>
-<svg viewBox="0 0 760 470" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
-  <rect x="280" y="10" width="200" height="40" />
-  <text x="380" y="27" text-anchor="middle" stroke="none" fill="#141414">nginx edge proxy</text>
-  <text x="380" y="42" text-anchor="middle" stroke="none" fill="#555" font-size="10.5">TLS termination · routing</text>
+<svg viewBox="0 0 780 500" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
+  <!-- edge -->
+  <rect x="290" y="10" width="200" height="40" fill="#fff"/>
+  <text x="390" y="27" text-anchor="middle" stroke="none" fill="#141414">nginx edge proxy</text>
+  <text x="390" y="42" text-anchor="middle" stroke="none" fill="#555" font-size="10.5">TLS termination · routing</text>
+  <line x1="390" y1="50" x2="390" y2="86" marker-end="url(#arr)"/>
 
-  <rect x="20" y="90" width="720" height="70" stroke-dasharray="3 3" stroke="#888"/>
+  <!-- applications tier -->
+  <rect x="20" y="90" width="740" height="70" stroke-dasharray="3 3" stroke="#999"/>
   <text x="30" y="105" stroke="none" fill="#555" font-size="10.5" font-style="italic">application services</text>
-  <rect x="40" y="112" width="120" height="36"/><text x="100" y="134" text-anchor="middle" stroke="none" fill="#141414">public website</text>
-  <rect x="175" y="112" width="130" height="36"/><text x="240" y="129" text-anchor="middle" stroke="none" fill="#141414">operations app</text><text x="240" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">Next.js</text>
-  <rect x="320" y="112" width="90" height="36"/><text x="365" y="134" text-anchor="middle" stroke="none" fill="#141414">kiosk</text>
-  <rect x="425" y="112" width="130" height="36"/><text x="490" y="129" text-anchor="middle" stroke="none" fill="#141414">customer portal</text><text x="490" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">magic-link auth</text>
-  <rect x="570" y="112" width="150" height="36" stroke-width="1.6"/><text x="645" y="129" text-anchor="middle" stroke="none" fill="#141414">core API</text><text x="645" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">60 domains · 520 endpoints</text>
+  <rect x="40" y="112" width="120" height="36" fill="#fff"/><text x="100" y="134" text-anchor="middle" stroke="none" fill="#141414">public website</text>
+  <rect x="180" y="112" width="130" height="36" fill="#fff"/><text x="245" y="129" text-anchor="middle" stroke="none" fill="#141414">operations app</text><text x="245" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">Next.js</text>
+  <rect x="330" y="112" width="90" height="36" fill="#fff"/><text x="375" y="134" text-anchor="middle" stroke="none" fill="#141414">kiosk</text>
+  <rect x="440" y="112" width="110" height="36" fill="#fff"/><text x="495" y="129" text-anchor="middle" stroke="none" fill="#141414">portal</text><text x="495" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">magic-link auth</text>
+  <rect x="570" y="112" width="150" height="36" fill="#fff" stroke-width="1.6"/><text x="645" y="129" text-anchor="middle" stroke="none" fill="#141414">core API</text><text x="645" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">60 domains · 520 endpoints</text>
 
-  <rect x="20" y="190" width="440" height="70" stroke-dasharray="3 3" stroke="#888"/>
-  <text x="30" y="205" stroke="none" fill="#555" font-size="10.5" font-style="italic">async &amp; integration</text>
-  <rect x="40" y="212" width="60" height="36"/><text x="70" y="234" text-anchor="middle" stroke="none" fill="#141414">sms</text>
-  <rect x="112" y="212" width="70" height="36"/><text x="147" y="234" text-anchor="middle" stroke="none" fill="#141414">email</text>
-  <rect x="194" y="212" width="70" height="36"/><text x="229" y="234" text-anchor="middle" stroke="none" fill="#141414">mail</text>
-  <rect x="276" y="212" width="80" height="36"/><text x="316" y="229" text-anchor="middle" stroke="none" fill="#141414">payments</text><text x="316" y="242" text-anchor="middle" stroke="none" fill="#555" font-size="10">reconcile</text>
-  <rect x="368" y="212" width="80" height="36"/><text x="408" y="229" text-anchor="middle" stroke="none" fill="#141414">documents</text><text x="408" y="242" text-anchor="middle" stroke="none" fill="#555" font-size="10">extraction</text>
+  <line x1="245" y1="160" x2="245" y2="196" marker-end="url(#arr)"/>
+  <line x1="625" y1="160" x2="625" y2="196" marker-end="url(#arr)"/>
 
-  <rect x="480" y="190" width="260" height="70" stroke-dasharray="3 3" stroke="#888"/>
-  <text x="490" y="205" stroke="none" fill="#555" font-size="10.5" font-style="italic">platform</text>
-  <rect x="495" y="212" width="70" height="36"/><text x="530" y="229" text-anchor="middle" stroke="none" fill="#141414">health</text><text x="530" y="242" text-anchor="middle" stroke="none" fill="#555" font-size="10">probes</text>
-  <rect x="575" y="212" width="75" height="36"/><text x="612" y="229" text-anchor="middle" stroke="none" fill="#141414">monitoring</text><text x="612" y="242" text-anchor="middle" stroke="none" fill="#555" font-size="10">SLOs</text>
-  <rect x="658" y="212" width="72" height="36"/><text x="694" y="229" text-anchor="middle" stroke="none" fill="#141414">MySQL ·</text><text x="694" y="242" text-anchor="middle" stroke="none" fill="#141414">MinIO</text>
+  <!-- workers + platform tiers -->
+  <rect x="20" y="200" width="450" height="70" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="30" y="215" stroke="none" fill="#555" font-size="10.5" font-style="italic">async &amp; integration</text>
+  <rect x="40" y="222" width="64" height="36" fill="#fff"/><text x="72" y="244" text-anchor="middle" stroke="none" fill="#141414">sms</text>
+  <rect x="118" y="222" width="72" height="36" fill="#fff"/><text x="154" y="244" text-anchor="middle" stroke="none" fill="#141414">email</text>
+  <rect x="204" y="222" width="72" height="36" fill="#fff"/><text x="240" y="244" text-anchor="middle" stroke="none" fill="#141414">mail</text>
+  <rect x="290" y="222" width="80" height="36" fill="#fff"/><text x="330" y="239" text-anchor="middle" stroke="none" fill="#141414">payments</text><text x="330" y="252" text-anchor="middle" stroke="none" fill="#555" font-size="10">reconcile</text>
+  <rect x="384" y="222" width="72" height="36" fill="#fff"/><text x="420" y="239" text-anchor="middle" stroke="none" fill="#141414">docs</text><text x="420" y="252" text-anchor="middle" stroke="none" fill="#555" font-size="10">extraction</text>
 
-  <rect x="20" y="300" width="300" height="64" stroke-dasharray="3 3" stroke="#888"/>
-  <text x="30" y="315" stroke="none" fill="#555" font-size="10.5" font-style="italic">field hardware</text>
-  <rect x="40" y="322" width="260" height="34"/><text x="170" y="338" text-anchor="middle" stroke="none" fill="#141414">vehicle telemetry — ESP32 · OBD-II · GPS</text><text x="170" y="351" text-anchor="middle" stroke="none" fill="#555" font-size="10">store-and-forward over LTE</text>
+  <rect x="490" y="200" width="270" height="70" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="500" y="215" stroke="none" fill="#555" font-size="10.5" font-style="italic">platform</text>
+  <rect x="506" y="222" width="70" height="36" fill="#fff"/><text x="541" y="239" text-anchor="middle" stroke="none" fill="#141414">health</text><text x="541" y="252" text-anchor="middle" stroke="none" fill="#555" font-size="10">probes</text>
+  <rect x="588" y="222" width="76" height="36" fill="#fff"/><text x="626" y="239" text-anchor="middle" stroke="none" fill="#141414">monitoring</text><text x="626" y="252" text-anchor="middle" stroke="none" fill="#555" font-size="10">SLOs</text>
+  <rect x="676" y="222" width="72" height="36" fill="#fff"/><text x="712" y="239" text-anchor="middle" stroke="none" fill="#141414">MySQL</text><text x="712" y="252" text-anchor="middle" stroke="none" fill="#141414">MinIO</text>
 
-  <rect x="440" y="300" width="300" height="64" stroke-dasharray="3 3" stroke="#888"/>
-  <text x="450" y="315" stroke="none" fill="#555" font-size="10.5" font-style="italic">external APIs</text>
-  <rect x="455" y="322" width="82" height="34"/><text x="496" y="338" text-anchor="middle" stroke="none" fill="#141414">OpenAI</text><text x="496" y="351" text-anchor="middle" stroke="none" fill="#555" font-size="10">vision</text>
-  <rect x="547" y="322" width="90" height="34"/><text x="592" y="338" text-anchor="middle" stroke="none" fill="#141414">Meta Graph</text><text x="592" y="351" text-anchor="middle" stroke="none" fill="#555" font-size="10">publish · insights</text>
-  <rect x="647" y="322" width="85" height="34"/><text x="689" y="338" text-anchor="middle" stroke="none" fill="#141414">Google</text><text x="689" y="351" text-anchor="middle" stroke="none" fill="#555" font-size="10">Business Profile</text>
+  <!-- field + external tiers -->
+  <rect x="20" y="310" width="310" height="70" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="30" y="325" stroke="none" fill="#555" font-size="10.5" font-style="italic">field hardware</text>
+  <rect x="40" y="332" width="270" height="36" fill="#fff"/><text x="175" y="348" text-anchor="middle" stroke="none" fill="#141414">vehicle telemetry — ESP32 · OBD-II · GPS</text><text x="175" y="361" text-anchor="middle" stroke="none" fill="#555" font-size="10">store-and-forward over LTE</text>
 
-  <line x1="380" y1="50" x2="380" y2="88" marker-end="url(#arr)"/>
-  <line x1="240" y1="160" x2="240" y2="188" marker-end="url(#arr)"/>
-  <line x1="612" y1="160" x2="612" y2="188" marker-end="url(#arr)"/>
-  <line x1="170" y1="298" x2="570" y2="150" marker-end="url(#arr)" stroke-dasharray="4 3"/>
-  <text x="330" y="282" stroke="none" fill="#555" font-size="10" font-style="italic">gzip NDJSON / LTE</text>
-  <line x1="645" y1="150" x2="592" y2="320" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+  <rect x="450" y="310" width="310" height="70" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="460" y="325" stroke="none" fill="#555" font-size="10.5" font-style="italic">external APIs</text>
+  <rect x="466" y="332" width="84" height="36" fill="#fff"/><text x="508" y="348" text-anchor="middle" stroke="none" fill="#141414">OpenAI</text><text x="508" y="361" text-anchor="middle" stroke="none" fill="#555" font-size="10">vision</text>
+  <rect x="562" y="332" width="90" height="36" fill="#fff"/><text x="607" y="348" text-anchor="middle" stroke="none" fill="#141414">Meta Graph</text><text x="607" y="361" text-anchor="middle" stroke="none" fill="#555" font-size="10">publish · insights</text>
+  <rect x="664" y="332" width="84" height="36" fill="#fff"/><text x="706" y="348" text-anchor="middle" stroke="none" fill="#141414">Google</text><text x="706" y="361" text-anchor="middle" stroke="none" fill="#555" font-size="10">Business Profile</text>
+
+  <!-- telemetry → core API: gutter route, never crossing a box -->
+  <path d="M175,332 V288 H480 V180 H645 V164" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="330" y="283" stroke="none" fill="#555" font-size="10" font-style="italic">gzip NDJSON / LTE</text>
+
+  <!-- core API → external APIs: right-gutter route -->
+  <path d="M720,130 H768 V345 H764" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="775" y="240" stroke="none" fill="#555" font-size="10" font-style="italic" transform="rotate(90 771 240)" text-anchor="middle">captions · publish · insights</text>
+
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#141414"/>
@@ -276,21 +286,24 @@
 <p>All public hostnames resolve through DNS to a CDN/proxy layer, which forwards to the origin host's nginx edge. nginx terminates TLS and routes by hostname into per-stack container networks. Figure&nbsp;2 traces one request.</p>
 
 <figure>
-<svg viewBox="0 0 760 200" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
-  <rect x="10" y="70" width="90" height="40"/><text x="55" y="87" text-anchor="middle" stroke="none" fill="#141414">client</text><text x="55" y="101" text-anchor="middle" stroke="none" fill="#555" font-size="10">browser / kiosk</text>
-  <rect x="140" y="70" width="100" height="40"/><text x="190" y="87" text-anchor="middle" stroke="none" fill="#141414">DNS + CDN</text><text x="190" y="101" text-anchor="middle" stroke="none" fill="#555" font-size="10">proxy layer</text>
-  <rect x="280" y="70" width="110" height="40"/><text x="335" y="87" text-anchor="middle" stroke="none" fill="#141414">origin nginx</text><text x="335" y="101" text-anchor="middle" stroke="none" fill="#555" font-size="10">TLS · vhost routing</text>
-  <rect x="430" y="30" width="300" height="130" stroke-dasharray="3 3" stroke="#888"/>
-  <text x="440" y="46" stroke="none" fill="#555" font-size="10.5" font-style="italic">per-stack bridge network</text>
-  <rect x="450" y="58" width="110" height="36"/><text x="505" y="75" text-anchor="middle" stroke="none" fill="#141414">app / api</text><text x="505" y="88" text-anchor="middle" stroke="none" fill="#555" font-size="10">addressed by name</text>
-  <rect x="450" y="108" width="110" height="36"/><text x="505" y="130" text-anchor="middle" stroke="none" fill="#141414">workers</text>
-  <rect x="590" y="58" width="120" height="36"/><text x="650" y="75" text-anchor="middle" stroke="none" fill="#141414">mysql:3306</text><text x="650" y="88" text-anchor="middle" stroke="none" fill="#555" font-size="10">container DNS</text>
-  <rect x="590" y="108" width="120" height="36"/><text x="650" y="130" text-anchor="middle" stroke="none" fill="#141414">minio:9000</text>
-  <line x1="100" y1="90" x2="138" y2="90" marker-end="url(#arr2)"/>
-  <line x1="240" y1="90" x2="278" y2="90" marker-end="url(#arr2)"/>
-  <line x1="390" y1="90" x2="448" y2="78" marker-end="url(#arr2)"/>
-  <line x1="560" y1="76" x2="588" y2="76" marker-end="url(#arr2)"/>
-  <line x1="560" y1="126" x2="588" y2="126" marker-end="url(#arr2)"/>
+<svg viewBox="0 0 760 212" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
+  <rect x="10" y="75" width="90" height="40" fill="#fff"/><text x="55" y="92" text-anchor="middle" stroke="none" fill="#141414">client</text><text x="55" y="106" text-anchor="middle" stroke="none" fill="#555" font-size="10">browser / kiosk</text>
+  <rect x="140" y="75" width="100" height="40" fill="#fff"/><text x="190" y="92" text-anchor="middle" stroke="none" fill="#141414">DNS + CDN</text><text x="190" y="106" text-anchor="middle" stroke="none" fill="#555" font-size="10">proxy layer</text>
+  <rect x="280" y="75" width="110" height="40" fill="#fff"/><text x="335" y="92" text-anchor="middle" stroke="none" fill="#141414">origin nginx</text><text x="335" y="106" text-anchor="middle" stroke="none" fill="#555" font-size="10">TLS · vhost routing</text>
+
+  <rect x="430" y="20" width="310" height="172" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="440" y="36" stroke="none" fill="#555" font-size="10.5" font-style="italic">per-stack bridge network</text>
+  <rect x="450" y="52" width="120" height="36" fill="#fff"/><text x="510" y="69" text-anchor="middle" stroke="none" fill="#141414">app / api</text><text x="510" y="82" text-anchor="middle" stroke="none" fill="#555" font-size="10">addressed by name</text>
+  <rect x="450" y="132" width="120" height="36" fill="#fff"/><text x="510" y="154" text-anchor="middle" stroke="none" fill="#141414">workers</text>
+  <rect x="600" y="52" width="120" height="36" fill="#fff"/><text x="660" y="69" text-anchor="middle" stroke="none" fill="#141414">mysql:3306</text><text x="660" y="82" text-anchor="middle" stroke="none" fill="#555" font-size="10">container DNS</text>
+  <rect x="600" y="132" width="120" height="36" fill="#fff"/><text x="660" y="154" text-anchor="middle" stroke="none" fill="#141414">minio:9000</text>
+
+  <line x1="100" y1="95" x2="138" y2="95" marker-end="url(#arr2)"/>
+  <line x1="240" y1="95" x2="278" y2="95" marker-end="url(#arr2)"/>
+  <path d="M390,95 H420 V70 H448" marker-end="url(#arr2)"/>
+  <line x1="510" y1="88" x2="510" y2="130" marker-end="url(#arr2)"/>
+  <line x1="570" y1="70" x2="598" y2="70" marker-end="url(#arr2)"/>
+  <line x1="570" y1="150" x2="598" y2="150" marker-end="url(#arr2)"/>
   <defs>
     <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#141414"/>
@@ -321,21 +334,26 @@
 <p>Every service builds in GitHub Actions to multi-architecture images (amd64/arm64 via Buildx + QEMU) published to GHCR; semantic version tags cut releases, and pull requests build without publishing. Deployment is one idempotent tool, <code>stackctl</code>, and a control plane that turns environments into a product (Figure&nbsp;3).</p>
 
 <figure>
-<svg viewBox="0 0 760 210" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
-  <rect x="10" y="80" width="120" height="44"/><text x="70" y="98" text-anchor="middle" stroke="none" fill="#141414">GitHub Actions</text><text x="70" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">buildx · qemu</text>
-  <rect x="170" y="80" width="80" height="44"/><text x="210" y="98" text-anchor="middle" stroke="none" fill="#141414">GHCR</text><text x="210" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">multi-arch</text>
-  <rect x="290" y="80" width="110" height="44"/><text x="345" y="98" text-anchor="middle" stroke="none" fill="#141414">stackctl</text><text x="345" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">SHA-diff deploys</text>
-  <rect x="290" y="10" width="110" height="40"/><text x="345" y="27" text-anchor="middle" stroke="none" fill="#141414">control plane</text><text x="345" y="41" text-anchor="middle" stroke="none" fill="#555" font-size="10">shells out, never forks logic</text>
-  <line x1="345" y1="50" x2="345" y2="78" marker-end="url(#arr3)"/>
-  <rect x="450" y="14" width="280" height="180" stroke-dasharray="3 3" stroke="#888"/>
+<svg viewBox="0 0 760 214" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
+  <rect x="10" y="80" width="120" height="44" fill="#fff"/><text x="70" y="98" text-anchor="middle" stroke="none" fill="#141414">GitHub Actions</text><text x="70" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">buildx · qemu</text>
+  <rect x="170" y="80" width="80" height="44" fill="#fff"/><text x="210" y="98" text-anchor="middle" stroke="none" fill="#141414">GHCR</text><text x="210" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">multi-arch</text>
+  <rect x="290" y="80" width="110" height="44" fill="#fff"/><text x="345" y="98" text-anchor="middle" stroke="none" fill="#141414">stackctl</text><text x="345" y="112" text-anchor="middle" stroke="none" fill="#555" font-size="10">SHA-diff deploys</text>
+  <rect x="290" y="10" width="110" height="40" fill="#fff"/><text x="345" y="27" text-anchor="middle" stroke="none" fill="#141414">control plane</text><text x="345" y="41" text-anchor="middle" stroke="none" fill="#555" font-size="10">shells out, never forks logic</text>
+
+  <rect x="450" y="14" width="290" height="186" stroke-dasharray="3 3" stroke="#999"/>
   <text x="460" y="30" stroke="none" fill="#555" font-size="10.5" font-style="italic">one host</text>
-  <rect x="468" y="40" width="112" height="42"/><text x="524" y="57" text-anchor="middle" stroke="none" fill="#141414">production</text><text x="524" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
-  <rect x="468" y="94" width="112" height="42"/><text x="524" y="111" text-anchor="middle" stroke="none" fill="#141414">staging</text><text x="524" y="125" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
-  <rect x="468" y="146" width="112" height="42"/><text x="524" y="163" text-anchor="middle" stroke="none" fill="#141414">tenant "acme"</text><text x="524" y="177" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
-  <rect x="612" y="94" width="104" height="42"/><text x="664" y="111" text-anchor="middle" stroke="none" fill="#141414">Caddy edge</text><text x="664" y="125" text-anchor="middle" stroke="none" fill="#555" font-size="10">shared · auto-TLS</text>
+  <rect x="468" y="40" width="112" height="42" fill="#fff"/><text x="524" y="57" text-anchor="middle" stroke="none" fill="#141414">production</text><text x="524" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
+  <rect x="468" y="96" width="112" height="42" fill="#fff"/><text x="524" y="113" text-anchor="middle" stroke="none" fill="#141414">staging</text><text x="524" y="127" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
+  <rect x="468" y="152" width="112" height="42" fill="#fff"/><text x="524" y="169" text-anchor="middle" stroke="none" fill="#141414">tenant "acme"</text><text x="524" y="183" text-anchor="middle" stroke="none" fill="#555" font-size="10">net · db · minio</text>
+  <rect x="622" y="96" width="104" height="42" fill="#fff"/><text x="674" y="113" text-anchor="middle" stroke="none" fill="#141414">Caddy edge</text><text x="674" y="127" text-anchor="middle" stroke="none" fill="#555" font-size="10">shared · auto-TLS</text>
+
+  <line x1="345" y1="50" x2="345" y2="78" marker-end="url(#arr3)"/>
   <line x1="130" y1="102" x2="168" y2="102" marker-end="url(#arr3)"/>
   <line x1="250" y1="102" x2="288" y2="102" marker-end="url(#arr3)"/>
   <line x1="400" y1="102" x2="466" y2="102" marker-end="url(#arr3)"/>
+  <path d="M580,61 H601 V107 H620" marker-end="url(#arr3)"/>
+  <line x1="580" y1="117" x2="620" y2="117" marker-end="url(#arr3)"/>
+  <path d="M580,173 H601 V127 H620" marker-end="url(#arr3)"/>
   <defs>
     <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#141414"/>
@@ -365,22 +383,24 @@
 <p>The social publishing subsystem is a compact study in operating an LLM feature in production, end-to-end (Figure&nbsp;4). The design goal was not "generate captions"; it was a <em>measurable loop</em> in which generation quality is judged by platform engagement and tuned without deployments.</p>
 
 <figure>
-<svg viewBox="0 0 760 230" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
-  <rect x="10" y="40" width="90" height="40"/><text x="55" y="57" text-anchor="middle" stroke="none" fill="#141414">photo</text><text x="55" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">normalized JPEG</text>
-  <rect x="140" y="40" width="130" height="40"/><text x="205" y="57" text-anchor="middle" stroke="none" fill="#141414">vision captioning</text><text x="205" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">JSON-schema constrained</text>
-  <rect x="310" y="40" width="120" height="40"/><text x="370" y="57" text-anchor="middle" stroke="none" fill="#141414">scheduler</text><text x="370" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">1 post / business day</text>
-  <rect x="470" y="40" width="120" height="40"/><text x="530" y="57" text-anchor="middle" stroke="none" fill="#141414">publishers</text><text x="530" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">IG · FB · GBP</text>
-  <rect x="630" y="40" width="110" height="40"/><text x="685" y="57" text-anchor="middle" stroke="none" fill="#141414">platform ids</text><text x="685" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">stored per post</text>
-  <rect x="470" y="150" width="150" height="40"/><text x="545" y="167" text-anchor="middle" stroke="none" fill="#141414">insights rollup</text><text x="545" y="181" text-anchor="middle" stroke="none" fill="#555" font-size="10">engagement per style angle</text>
-  <rect x="140" y="150" width="180" height="40"/><text x="230" y="167" text-anchor="middle" stroke="none" fill="#141414">prompt &amp; style settings</text><text x="230" y="181" text-anchor="middle" stroke="none" fill="#555" font-size="10">database-backed · no-deploy tuning</text>
+<svg viewBox="0 0 760 240" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
+  <rect x="10" y="40" width="90" height="40" fill="#fff"/><text x="55" y="57" text-anchor="middle" stroke="none" fill="#141414">photo</text><text x="55" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">normalized JPEG</text>
+  <rect x="140" y="40" width="130" height="40" fill="#fff"/><text x="205" y="57" text-anchor="middle" stroke="none" fill="#141414">vision captioning</text><text x="205" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">JSON-schema constrained</text>
+  <rect x="310" y="40" width="120" height="40" fill="#fff"/><text x="370" y="57" text-anchor="middle" stroke="none" fill="#141414">scheduler</text><text x="370" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">1 post / business day</text>
+  <rect x="470" y="40" width="120" height="40" fill="#fff"/><text x="530" y="57" text-anchor="middle" stroke="none" fill="#141414">publishers</text><text x="530" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">IG · FB · GBP</text>
+  <rect x="630" y="40" width="110" height="40" fill="#fff"/><text x="685" y="57" text-anchor="middle" stroke="none" fill="#141414">platform ids</text><text x="685" y="71" text-anchor="middle" stroke="none" fill="#555" font-size="10">stored per post</text>
+
+  <rect x="620" y="160" width="130" height="40" fill="#fff"/><text x="685" y="177" text-anchor="middle" stroke="none" fill="#141414">insights rollup</text><text x="685" y="191" text-anchor="middle" stroke="none" fill="#555" font-size="10">engagement per angle</text>
+  <rect x="140" y="160" width="180" height="40" fill="#fff"/><text x="230" y="177" text-anchor="middle" stroke="none" fill="#141414">prompt &amp; style settings</text><text x="230" y="191" text-anchor="middle" stroke="none" fill="#555" font-size="10">database-backed · no-deploy tuning</text>
+
   <line x1="100" y1="60" x2="138" y2="60" marker-end="url(#arr4)"/>
   <line x1="270" y1="60" x2="308" y2="60" marker-end="url(#arr4)"/>
   <line x1="430" y1="60" x2="468" y2="60" marker-end="url(#arr4)"/>
   <line x1="590" y1="60" x2="628" y2="60" marker-end="url(#arr4)"/>
-  <line x1="685" y1="80" x2="600" y2="148" marker-end="url(#arr4)"/>
-  <line x1="468" y1="170" x2="322" y2="170" marker-end="url(#arr4)"/>
-  <line x1="230" y1="148" x2="205" y2="82" marker-end="url(#arr4)"/>
-  <text x="380" y="215" text-anchor="middle" stroke="none" fill="#555" font-size="10.5" font-style="italic">generate → constrain → publish → measure → tune → generate</text>
+  <line x1="685" y1="80" x2="685" y2="158" marker-end="url(#arr4)"/>
+  <line x1="618" y1="180" x2="324" y2="180" marker-end="url(#arr4)"/>
+  <path d="M230,160 V112 H205 V84" marker-end="url(#arr4)"/>
+  <text x="380" y="226" text-anchor="middle" stroke="none" fill="#555" font-size="10.5" font-style="italic">generate → constrain → publish → measure → tune → generate</text>
   <defs>
     <marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#141414"/>
@@ -458,7 +478,7 @@ jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
 </div>
 
 <hr class="footrule">
-<p class="colophon">Revised August 26, 2026 · typeset in Latin Modern · <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
+<p class="colophon">Revised August 26, 2026 · typeset in Latin Modern · <a href="overview.html">interactive overview</a> · <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
 
 </div>
 </body>
