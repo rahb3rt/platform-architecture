@@ -1,6 +1,6 @@
 # Anatomy of a Solo-Operated Production Microservice Platform
 
-**Robert Davis** — CEO, CTO, and Principal Architect — sole developer and operator of the system described.
+**Robert Davis** — CEO, CTO, and Principal Architect
 
 **A solo-built, solo-operated microservices platform running a real business in production since 2023.** *Revised August 26, 2026.*
 
