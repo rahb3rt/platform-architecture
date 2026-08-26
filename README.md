@@ -1,8 +1,8 @@
-# Production Platform Architecture
+# Anatomy of a Solo-Operated Production Microservice Platform
 
-**A solo-built, solo-operated microservices platform running a real business in production since 2023.**
+**A solo-built, solo-operated microservices platform running a real business in production since 2023.** *Revised August 26, 2026.*
 
-**▶ Interactive version: [rahb3rt.github.io/platform-architecture](https://rahb3rt.github.io/platform-architecture/)**
+**▶ The primary, typeset version of this document — research-paper style, with figures — is served at [rahb3rt.github.io/platform-architecture](https://rahb3rt.github.io/platform-architecture/). This README is the plain-markdown mirror.**
 
 This document describes the architecture of a production platform I designed, built, and operate end-to-end: 15 services plus embedded vehicle hardware, with CI/CD, observability, SLO tracking, and multi-environment deployment behind a self-service control plane. The application code is proprietary (it runs my company); this repo documents the engineering.
 
