@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Architecture — Interactive Overview — Robert Davis</title>
+<meta name="description" content="One engineer. Fifteen services. Production since 2023. Architecture of a solo-built, solo-operated production platform.">
+<meta property="og:title" content="Platform Architecture — Robert Davis">
+<meta property="og:description" content="One engineer. Fifteen services. Production since 2023.">
+<meta property="og:image" content="https://rahb3rt.github.io/platform-architecture/og.png">
+<meta property="og:url" content="https://rahb3rt.github.io/platform-architecture/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='38' fill='%233FDF8C'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1420;
+    --panel: #161F2E;
+    --panel-2: #121A27;
+    --line: #24344A;
+    --text: #D7E1EE;
+    --muted: #7E8EA6;
+    --ok: #3FDF8C;
+    --amber: #F0B454;
+    --accent: #6FB3FF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── console top bar ─────────────────────────── */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .topbar-in {
+    max-width: 1060px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .topbar .repo { color: var(--muted); }
+  .topbar .repo strong { color: var(--text); font-weight: 500; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line); border-radius: 100px;
+    padding: 3px 12px; color: var(--ok); font-size: 12.5px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+  .dot.amber { background: var(--amber); }
+  .topbar .gh { margin-left: auto; }
+
+  /* ── hero ────────────────────────────────────── */
+  .hero { padding-top: 72px; padding-bottom: 56px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: clamp(34px, 6vw, 58px); line-height: 1.06;
+    letter-spacing: -0.015em; max-width: 17ch;
+  }
+  h1 .n { color: var(--ok); }
+  .hero p.lede { max-width: 62ch; margin-top: 22px; color: var(--muted); font-size: 17.5px; }
+  .hero p.lede strong { color: var(--text); font-weight: 600; }
+  .statline {
+    margin-top: 30px; display: flex; gap: 28px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--muted);
+  }
+  .statline span b { color: var(--text); font-weight: 500; }
+
+  /* ── sections ────────────────────────────────── */
+  section { padding: 46px 0; border-top: 1px solid var(--line); }
+  h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 26px; letter-spacing: -0.01em; margin-bottom: 8px;
+  }
+  .sec-note { color: var(--muted); max-width: 68ch; margin-bottom: 28px; }
+  .sec-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  /* ── status board (signature) ────────────────── */
+  .tier { margin-bottom: 22px; }
+  .tier-name {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .tier-name::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 10px; }
+  .svc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 13px 15px 12px;
+    opacity: 0; transform: translateY(6px);
+    animation: settle 0.35s ease forwards;
+  }
+  @keyframes settle { to { opacity: 1; transform: none; } }
+  .svc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .svc-name { font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 15.5px; }
+  .svc-role { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .svc-stack {
+    margin-top: 9px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px; color: var(--accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .svc { animation: none; opacity: 1; transform: none; }
+  }
+
+  /* ── api surface chips ───────────────────────── */
+  .api-surface { margin-top: 4px; }
+  .asg { margin-bottom: 9px; }
+  .asg strong {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+    display: inline-block; width: 120px; vertical-align: middle;
+  }
+  .asg span {
+    display: inline-block; border: 1px solid var(--line); border-radius: 100px;
+    background: var(--panel); padding: 2px 11px; margin: 2px 4px 2px 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--text);
+  }
+  @media (max-width: 640px) { .asg strong { display: block; width: auto; margin-bottom: 3px; } }
+
+  /* ── pipeline ────────────────────────────────── */
+  .pipe-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .pipe {
+    display: flex; align-items: stretch; gap: 0; min-width: 720px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .pipe .step {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; flex: 1;
+  }
+  .pipe .step .k { color: var(--ok); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .pipe .arrow { display: flex; align-items: center; padding: 0 10px; color: var(--muted); flex: none; }
+  .pipe-note { margin-top: 16px; color: var(--muted); max-width: 68ch; }
+
+  /* ── environments ────────────────────────────── */
+  .envs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .env {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px;
+  }
+  .env .cmd { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--ok); margin-bottom: 8px; display: block; }
+  .env p { color: var(--muted); font-size: 14px; }
+  .callout {
+    margin-top: 22px; border: 1px solid var(--line); border-left: 3px solid var(--amber);
+    border-radius: 8px; background: var(--panel-2); padding: 18px 20px; max-width: 100%;
+  }
+  .callout .tag { color: var(--amber); font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.ok .tag { color: var(--ok); }
+  .callout p { color: var(--muted); font-size: 14.5px; max-width: 78ch; }
+  .callout p strong { color: var(--text); }
+  .callout p code { font-family: 'IBM Plex Mono', monospace; font-size: 0.92em; color: var(--accent); }
+
+  /* ── reliability ─────────────────────────────── */
+  .rel { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .rel .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+  .rel h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16.5px; font-weight: 500; margin-bottom: 7px; }
+  .rel p { color: var(--muted); font-size: 14px; }
+  .rel .card .probe { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--accent); display: block; margin-top: 10px; }
+
+  /* ── postmortem ──────────────────────────────── */
+  .pm { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
+  .pm .pm-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  .pm h3 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+  .pm p { color: var(--muted); font-size: 15px; max-width: 76ch; margin-bottom: 12px; }
+  .pm p strong { color: var(--text); }
+  .pm-tl { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .pm-row { display: flex; gap: 16px; padding: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .pm-row .d { font-family: 'IBM Plex Mono', monospace; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .pm-row .h { font-family: 'IBM Plex Mono', monospace; color: var(--accent); font-size: 12px; white-space: nowrap; }
+  .pm-row .m { color: var(--text); }
+  @media (max-width: 640px) { .pm-row { flex-wrap: wrap; gap: 8px; } }
+
+  /* ── decisions ───────────────────────────────── */
+  .dec { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 780px) { .dec { grid-template-columns: 1fr; } }
+  .dec .d { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+  .dec h3 { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 500; margin-bottom: 9px; }
+  .dec h3 .q { color: var(--muted); font-weight: 400; }
+  .dec p { color: var(--muted); font-size: 14.5px; }
+  .dec p strong { color: var(--text); }
+
+  /* ── footer ──────────────────────────────────── */
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; }
+  .repos { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 26px; }
+  .repos a {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 13px;
+    color: var(--text); background: var(--panel);
+  }
+  .repos a:hover { border-color: var(--accent); text-decoration: none; color: var(--accent); }
+  .fine { color: var(--muted); font-size: 14px; max-width: 70ch; }
+  .fine a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="repo"><strong>rahb3rt</strong>/platform-architecture</span>
+    <span class="pill"><span class="dot"></span>in production since 2023</span>
+    <a class="gh" href="./">read the paper ↗</a>
+    <a class="gh" href="https://github.com/rahb3rt/platform-architecture">view on github ↗</a>
+  </div>
+</div>
+
+<header class="hero wrap">
+  <p class="eyebrow">Robert Davis — architect, builder, and sole operator</p>
+  <h1>One engineer. <span class="n">Fifteen services.</span> Production since 2023.</h1>
+  <p class="lede">This platform runs a real business — customers, payments, field crews, vehicles. I designed it, built every service, and operate it alone: <strong>CI/CD, observability, SLO tracking, backups, and on-call included.</strong> The application code is proprietary; the engineering is documented here.</p>
+  <div class="statline">
+    <span><b>15</b> services</span>
+    <span><b>17,000+</b> jobs scheduled</span>
+    <span><b>5,200+</b> invoices processed</span>
+    <span><b>100,000+</b> telemetry readings</span>
+    <span><b>1</b> operator</span>
+  </div>
+</header>
+
+<section id="topology">
+  <div class="wrap">
+    <h2>Service topology</h2>
+    <p class="sec-note">Grouped the way the system actually fails: edge, applications, async workers, platform, and hardware in the field.</p>
+
+    <div class="tier">
+      <div class="tier-name">edge</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">nginx</span></div><div class="svc-role">TLS termination and routing for every environment</div><span class="svc-stack">nginx:alpine · generated config</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">applications</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic — 60 domains, 520 endpoints; the single source of truth</div><span class="svc-stack">Python · Flask · MySQL</span></div>
+        <div class="svc" style="animation-delay:.06s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
+        <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
+        <div class="svc" style="animation-delay:.12s"><div class="svc-top"><span class="dot"></span><span class="svc-name">customer portal</span></div><div class="svc-role">Balance, invoices, next visit, service requests — magic-link sign-in, no passwords</div><span class="svc-stack">Next.js 15 · passwordless JWT</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">async &amp; integration</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms</span></div><div class="svc-role">Two-way customer texting</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.14s"><div class="svc-top"><span class="dot"></span><span class="svc-name">email ingest &amp; send</span></div><div class="svc-role">Inbound parsing and outbound delivery</div><span class="svc-stack">Node</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">transactional mail</span></div><div class="svc-role">Templated customer notifications</div><span class="svc-stack">HTML templating</span></div>
+        <div class="svc" style="animation-delay:.18s"><div class="svc-top"><span class="dot"></span><span class="svc-name">payment reconciliation</span></div><div class="svc-role">Matches external payments to invoices</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">document extraction</span></div><div class="svc-role">Inbound documents to structured data</div><span class="svc-stack">Python</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">platform</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.22s"><div class="svc-top"><span class="dot"></span><span class="svc-name">health aggregator</span></div><div class="svc-role">Auto-discovers containers, probes each on a loop</div><span class="svc-stack">FastAPI · Docker SDK · HTTP/MySQL/TCP</span></div>
+        <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">monitoring &amp; SLOs</span></div><div class="svc-role">Container stats, logs, alerting, SLO tracking</div><span class="svc-stack">Next.js · RBAC</span></div>
+        <div class="svc" style="animation-delay:.26s"><div class="svc-top"><span class="dot"></span><span class="svc-name">mysql</span></div><div class="svc-role">Primary datastore, per-tenant instances</div><span class="svc-stack">MySQL 8.0</span></div>
+        <div class="svc" style="animation-delay:.03s"><div class="svc-top"><span class="dot"></span><span class="svc-name">minio</span></div><div class="svc-role">S3-compatible object storage</div><span class="svc-stack">MinIO</span></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">field hardware</div>
+      <div class="board">
+        <div class="svc" style="animation-delay:.30s"><div class="svc-top"><span class="dot"></span><span class="svc-name">vehicle telemetry</span></div><div class="svc-role">OBD-II + GPS from trucks; store-and-forward over LTE</div><span class="svc-stack">C++ · ESP32 · Freematics</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dataflow">
+  <div class="wrap">
+    <h2>Data flow</h2>
+    <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed gray is observability, and the <span style="color:var(--amber)">amber boundary</span> is one tenant stack — everything inside it is replicated per tenant.</p>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to four frontends and a core API with 60 domains and 520 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
+      <defs>
+        <marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FDF8C"/></marker>
+        <marker id="m-ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6FB3FF"/></marker>
+      </defs>
+      <style>
+        .dg-t { font-family:'Space Grotesk',sans-serif; font-size:13.5px; fill:#D7E1EE; font-weight:500; text-anchor:middle; }
+        .dg-s { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#7E8EA6; text-anchor:middle; }
+        .dg-f { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#9FB3CC; text-anchor:middle; }
+        .dg-r { font-family:'IBM Plex Mono',monospace; font-size:11px; fill:#AFC0D6; }
+        .dg-g { font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:#7E8EA6; letter-spacing:1.5px; text-anchor:middle; }
+        .dg-a { font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:#F0B454; letter-spacing:1px; }
+        .dg-am { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#7E8EA6; }
+        .dg-lb { font-family:'IBM Plex Mono',monospace; font-size:9.5px; fill:#6FB3FF; }
+        .dg-fl { stroke:#3FDF8C; stroke-width:1.4; fill:none; }
+        .dg-fd { stroke:#6FB3FF; stroke-width:1.4; fill:none; }
+        .dg-pr { stroke:#7E8EA6; stroke-width:1.2; fill:none; stroke-dasharray:4 5; opacity:.7; }
+      </style>
+
+      <!-- tenant boundary -->
+      <rect x="16" y="96" width="928" height="580" rx="10" fill="none" stroke="#F0B454" stroke-dasharray="6 6" opacity="0.45"/>
+      <text class="dg-a" x="28" y="118">ISOLATED TENANT STACK · ×N</text>
+      <text class="dg-am" x="932" y="118" text-anchor="end">own network · database · objects · secrets</text>
+
+      <!-- outside: users + vehicles -->
+      <rect x="390" y="18" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="38">users</text>
+      <text class="dg-s" x="480" y="54">web · kiosk · phone</text>
+      <rect x="760" y="18" width="180" height="58" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="850" y="41">field vehicles</text>
+      <text class="dg-s" x="850" y="58">esp32 · obd-ii · gps</text>
+
+      <!-- nginx -->
+      <rect x="390" y="140" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="480" y="160">nginx</text>
+      <text class="dg-s" x="480" y="176">tls · routing</text>
+
+      <!-- frontends -->
+      <rect x="60" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="140" y="234">public website</text>
+      <text class="dg-s" x="140" y="250">next.js</text>
+      <rect x="280" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="360" y="234">operations app</text>
+      <text class="dg-s" x="360" y="250">next.js</text>
+      <rect x="500" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="580" y="234">kiosk</text>
+      <text class="dg-s" x="580" y="250">typescript</text>
+      <rect x="720" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="800" y="234">customer portal</text>
+      <text class="dg-s" x="800" y="250">magic-link · next.js</text>
+
+      <!-- core api (expanded) -->
+      <rect x="220" y="300" width="520" height="128" rx="8" fill="#161F2E" stroke="#3A557A"/>
+      <text class="dg-t" x="480" y="324" style="font-size:15px">core api</text>
+      <text class="dg-s" x="480" y="341">flask · 60 domains · 520 endpoints · source of truth</text>
+      <line x1="244" y1="352" x2="716" y2="352" stroke="#24344A"/>
+      <text class="dg-f" x="480" y="373">invoicing · payments · statements · quotes · contracts + e-sign</text>
+      <text class="dg-f" x="480" y="392">jobs · scheduling · route optimization · crews · timeclock · payroll</text>
+      <text class="dg-f" x="480" y="411">messaging · marketing · telemetry ingest · insights · rbac · webhooks</text>
+
+      <!-- workers -->
+      <rect x="20" y="300" width="170" height="200" rx="8" fill="#121A27" stroke="#24344A"/>
+      <text class="dg-g" x="105" y="324">ASYNC WORKERS</text>
+      <text class="dg-r" x="36" y="350">sms</text>
+      <text class="dg-r" x="36" y="374">email ingest</text>
+      <text class="dg-r" x="36" y="398">transactional mail</text>
+      <text class="dg-r" x="36" y="422">payment recon</text>
+      <text class="dg-r" x="36" y="446">doc extraction</text>
+
+      <!-- stores -->
+      <rect x="280" y="470" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="370" y="490">mysql</text>
+      <text class="dg-s" x="370" y="506">per-tenant</text>
+      <rect x="500" y="470" width="180" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="590" y="490">minio</text>
+      <text class="dg-s" x="590" y="506">s3 objects</text>
+
+      <!-- observability -->
+      <rect x="20" y="560" width="300" height="56" rx="8" fill="#161F2E" stroke="#24344A"/>
+      <text class="dg-t" x="170" y="583">health + monitoring</text>
+      <text class="dg-s" x="170" y="600">auto-discovery · slo tracking</text>
+
+      <!-- request path -->
+      <path class="dg-fl" d="M480,64 L480,136" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M452,186 L146,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M470,186 L366,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M490,186 L574,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M508,186 L794,210" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M140,260 L246,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M360,260 L360,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M580,260 L580,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M800,260 L714,296" marker-end="url(#m-ok)"/>
+      <path class="dg-fl" d="M190,364 L216,364" marker-end="url(#m-ok)"/>
+
+      <!-- data + telemetry -->
+      <path class="dg-fd" d="M370,428 L370,466" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M590,428 L590,466" marker-end="url(#m-ac)"/>
+      <path class="dg-fd" d="M905,76 L905,364 L744,364" marker-end="url(#m-ac)"/>
+      <text class="dg-lb" x="898" y="150" text-anchor="end">store-and-forward</text>
+      <text class="dg-lb" x="898" y="164" text-anchor="end">gzip over lte</text>
+
+      <!-- probes -->
+      <path class="dg-pr" d="M320,588 L930,588"/>
+      <text class="dg-s" x="630" y="579">http · mysql · tcp probes — every service, every environment</text>
+      <path class="dg-pr" d="M370,588 L370,520"/>
+      <path class="dg-pr" d="M590,588 L590,520"/>
+      <path class="dg-pr" d="M480,588 L480,432"/>
+      <path class="dg-pr" d="M105,560 L105,504"/>
+    </svg>
+    </div>
+
+    <div class="sec-label" style="margin-top:30px">core api surface — 60 route domains · 520 endpoints</div>
+    <div class="api-surface">
+      <div class="asg"><strong>billing</strong><span>invoicing</span><span>payments</span><span>payment methods</span><span>statements</span><span>quotes</span><span>customer credit</span><span>expenses</span></div>
+      <div class="asg"><strong>contracts</strong><span>templates</span><span>e-signing</span><span>audit trail</span></div>
+      <div class="asg"><strong>crm</strong><span>customers</span><span>properties</span><span>leads</span><span>requests</span><span>sites</span></div>
+      <div class="asg"><strong>workforce</strong><span>employees</span><span>teams</span><span>timeclock</span><span>timecards</span><span>time-off</span><span>payroll</span></div>
+      <div class="asg"><strong>operations</strong><span>jobs</span><span>scheduling</span><span>calendar</span><span>route optimization</span><span>mowing</span><span>plowing plans</span><span>service plans</span></div>
+      <div class="asg"><strong>comms</strong><span>messaging</span><span>notifications</span><span>marketing campaigns</span><span>social</span></div>
+      <div class="asg"><strong>field &amp; assets</strong><span>vehicle telemetry</span><span>assets</span><span>access devices</span><span>access events</span><span>weather</span></div>
+      <div class="asg"><strong>platform</strong><span>auth</span><span>rbac roles</span><span>orgs</span><span>dashboards</span><span>reports</span><span>insights</span><span>webhook deliveries</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="delivery">
+  <div class="wrap">
+    <h2>Delivery</h2>
+    <p class="sec-note">Every service ships the same way. Pull requests build without publishing; version tags cut releases.</p>
+    <div class="pipe-scroll">
+      <div class="pipe">
+        <div class="step"><span class="k">trigger</span>git push / tag v*.*.*</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">build</span>GitHub Actions · Buildx + QEMU<br>amd64 / arm64</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">publish</span>ghcr.io</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">deploy</span>stackctl deploy &lt;env&gt;</div>
+      </div>
+    </div>
+    <p class="pipe-note">The deploy step is one idempotent tool: it pulls service repos, pre-builds the Next.js apps, provisions per-environment infrastructure, regenerates the edge routes, and brings the stack up under Docker or Podman — rebuilding only the services whose commit SHA actually moved. Backend images are built once per SHA and shared across every stack; the Next.js frontends bake per-environment branding at build time, so those build per stack. The genericized form is published as <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>.</p>
+  </div>
+</section>
+
+<section id="environments">
+  <div class="wrap">
+    <h2>Multi-environment deployment</h2>
+    <p class="sec-note">One host, N fully isolated stacks. Each gets its own network, its own MySQL server, its own object storage, its own secrets, and its own domain routes — nothing in the data path is shared between environments. The single shared component is one Caddy edge that terminates TLS and routes by hostname; every stack attaches its own routes at deploy time.</p>
+
+    <div class="tier">
+      <div class="tier-name">one mechanism · differently named</div>
+      <div class="envs">
+        <div class="env"><span class="cmd">stackctl deploy production</span><p>The live platform.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy staging</span><p>Production-shaped — same tooling, same generated edge config. Configuration drift surfaces here first, not in front of customers.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy acme</span><p>A dedicated customer stack: own database, object storage, domain routing, and secrets. Standing one up is one command, not a re-architecture.</p></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">stackctl · the deploy layer</div>
+      <div class="envs">
+        <div class="env"><span class="cmd">stackctl new acme --domain acmelawns.com</span><p>Provisions an environment end to end: network, database, object storage, generated secrets, routes. The schema is seeded from the API repo's checked-in SQL and tracked by a marker table, so re-running provisioning is safe.</p></div>
+        <div class="env"><span class="cmd">stackctl deploy acme</span><p>Rebuilds only the services whose repo SHA moved; already-built SHAs deploy from cache. Services resolve each other by container DNS, so deploy order is irrelevant.</p></div>
+        <div class="env"><span class="cmd">stackctl rollback acme api</span><p>Re-runs the previously recorded image for one service, in one environment only.</p></div>
+        <div class="env"><span class="cmd">stackctl backup acme</span><p>Gzipped dump of both of the stack's databases with drop-and-create semantics. Newest 72 retained — roughly three days of hourly backups.</p></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-name">control plane · the tenant layer</div>
+      <div class="rel">
+        <div class="card"><h3>Signup → workspace</h3><p>A customer claims a name and gets a full isolated stack at <em>name</em>.<em>base-domain</em>, on wildcard DNS, with certificates issued automatically on first deploy.</p><span class="probe">node · express · react spa</span></div>
+        <div class="card"><h3>Dispatch board</h3><p>Every stack as a grid, one cell per service, with live status, the tenant list, and a job queue that streams deploy logs as they run.</p><span class="probe">jobs run one at a time</span></div>
+        <div class="card"><h3>Tenant security</h3><p>Owner and member roles, expiring invitations, and a per-tenant audit log.</p><span class="probe">rbac · audit trail</span></div>
+        <div class="card"><h3>Billing &amp; licensing</h3><p>Subscription plans with entitlements from Community to Enterprise, annual terms and add-ons, plus Ed25519-signed licenses enforced at the stack level for self-hosted installs.</p><span class="probe">ed25519 · signed licenses</span></div>
+      </div>
+    </div>
+
+    <div class="callout ok">
+      <span class="tag"><span class="dot"></span>shipped</span>
+      <p><strong>The control plane never reimplements deploy logic.</strong> Every state change shells out to the same <code>stackctl</code> I run by hand, and status is read back from its registry plus one container-engine query. A second implementation of "what does deployed mean" is a guarantee that the dashboard and the CLI will eventually disagree — usually mid-incident, when the dashboard is the thing you're trusting.</p>
+    </div>
+    <div class="callout">
+      <span class="tag"><span class="dot amber"></span>the trade</span>
+      <p><strong>Shared-nothing costs RAM.</strong> A full MySQL and object store per environment buys a blast radius that stops at one stack, and pays for it in memory and disk. That's the right trade while stack count is small; it is explicitly the thing to revisit before it isn't. For the same reason self-service provisioning is gated by default — an anonymous form that instantly consumes a stack's worth of resources is a denial-of-wallet vector, so signups queue for approval unless they're gated upstream.</p>
+    </div>
+  </div>
+</section>
+
+<section id="reliability">
+  <div class="wrap">
+    <h2>Reliability engineering</h2>
+    <p class="sec-note">The tooling is built in-house, sized to the platform, and runs as part of it.</p>
+    <div class="rel">
+      <div class="card"><h3>Health aggregation</h3><p>A dedicated service discovers containers through the Docker/Podman API and probes each on a background loop. No manual registration, no stale check configs.</p><span class="probe">probes: http · mysql · tcp</span></div>
+      <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets</span></div>
+      <div class="card"><h3>Backups</h3><p>The control-plane process drives hourly per-tenant database backups — one gzipped dump of a stack's business and monitoring schemas, written drop-and-create so a restore rebuilds them whole, and pruned to the newest 72. Restore plus redeploy is the entire disaster-recovery story, by design.</p><span class="probe">hourly · per-tenant · 72 kept</span></div>
+      <div class="card"><h3>Deploy preflight</h3><p>Core datastores are verified before any service swap &mdash; started if stopped, deploy aborted if they won't come up. Deploying against a down datastore would bake dead endpoints into every rebuilt container.</p><span class="probe">mysql &middot; object storage &middot; abort-on-fail</span></div>
+      <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="ai-publishing">
+  <div class="wrap">
+    <h2>AI-assisted publishing, closed loop</h2>
+    <p class="sec-note">A production case study in operating an LLM feature end-to-end: generate, constrain, publish, measure, feed back.</p>
+    <div class="rel">
+      <div class="card"><h3>Constrained generation</h3><p>Vision captioning runs against a JSON schema (title / caption / hashtags), and the caption contract &mdash; contact placement, hashtag count and casing &mdash; is enforced in code, not trusted to the model.</p><span class="probe">structured outputs &middot; schema-strict</span></div>
+      <div class="card"><h3>Styles judged by results</h3><p>Captions rotate through engagement &ldquo;angles&rdquo; and every caption records which angle produced it. Publishing stores platform post ids; an insights endpoint batch-fetches engagement and rolls it up per angle.</p><span class="probe">per-angle scoreboard &middot; graph api</span></div>
+      <div class="card"><h3>Prompts are data</h3><p>Prompts, style lists, and posting parameters live in a settings table &mdash; code-seeded defaults with owner overrides beside them. Tuning the voice never requires a deploy.</p><span class="probe">db-backed &middot; no-deploy tuning</span></div>
+      <div class="card"><h3>Rate-limit-aware caching</h3><p>Third-party feeds layer browser persistence over a server TTL cache; an explicit refresh is the only real upstream fetch, floored so even button-mashing can&rsquo;t burn the quota. Token expiry flips accounts to needs-reconnect before posts start failing.</p><span class="probe">layered cache &middot; refresh floor &middot; expiry lookahead</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="postmortem">
+  <div class="wrap">
+    <h2>Failures, on the record</h2>
+    <p class="sec-note">Reliability claims are cheap. Here are real incidents from this platform's history — reconstructed from the commit log — hashes included.</p>
+    <div class="pm">
+      <div class="pm-eyebrow">postmortem · june 2026 · monitoring</div>
+      <h3>The observer effect</h3>
+      <p>The monitoring dashboard gained a live topology view — container stats, sparklines, request traces — on top of its real-user-monitoring ingest. The monitoring database lives on the same MySQL server as production. Within hours the topology view was timing out, and every one of those timeouts represented load pressure on the database that also serves the business.</p>
+      <p><strong>The first fix made it worse.</strong> Parallelizing all DB queries and trace fetches is the intuitive move when something is slow — and it multiplied the concurrent load on an already-stressed database. Reverted the same day. The durable fix went the opposite direction: batch the RUM inserts, reduce query limits, poll slower, fetch fewer traces, and put explicit timeouts and error containment on every query so the dashboard degrades instead of hammering.</p>
+      <p><strong>The lesson:</strong> monitoring is production. The observer carries the same load budget as the observed — and parallelism is not a fix for overload, it is a multiplier on it.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">ff77443</span><span class="m">Fix topology timeout: batch RUM inserts into chunks of 25</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">730466e</span><span class="m">Fix topology timeout: parallelize all DB queries and trace fetches</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">d4ce6c3</span><span class="m">Revert "Fix topology timeout: parallelize all DB queries and trace fetches"</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">9036fc7</span><span class="m">Fix topology timeout: reduce query limits safely</span></div>
+        <div class="pm-row"><span class="d">jun 08</span><span class="h">b743295</span><span class="m">Fix topology timeouts: slower polling, fewer trace fetches</span></div>
+        <div class="pm-row"><span class="d">jun 09</span><span class="h">4aa70e5</span><span class="m">Fix topology loading: reduce limits, add timeouts, catch errors</span></div>
+      </div>
+    </div>
+    <div class="pm" style="margin-top:28px">
+      <div class="pm-eyebrow">postmortem &middot; august 2026 &middot; media pipeline</div>
+      <h3>The build that lied</h3>
+      <p>An image-processing dependency ships its native binaries as optional packages carrying a <code>node &gt;= 20.9</code> engines constraint; the runtime image ran Node 18. npm skips engine-mismatched optional dependencies <strong>silently</strong> &mdash; the image built green, the container came up healthy, and the first <code>require()</code> at request time threw, sending every image the dashboard serves through the framework&rsquo;s generic 500 page.</p>
+      <p>Diagnosis came from the outside in: sibling routes sharing every import <em>except</em> the image library answered clean JSON errors, isolating the failing module without a shell on the box. The fix was one line. The finding was not: <strong>a green build proves the dependency graph resolved, not that it can load.</strong> Engines mismatches on optional dependencies are a silent runtime landmine &mdash; the class of failure that only surfaces in production, on the first request.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">aug 25</span><span class="h">8700923</span><span class="m">Bump runtime image to node:20-alpine for sharp 0.35</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <h2>Security posture</h2>
+    <p class="sec-note">Sized to the platform, enforced by structure rather than policy documents.</p>
+    <div class="rel">
+      <div class="card"><h3>Isolation by default</h3><p>Every tenant stack gets its own network, database, object storage, and secrets. There is no shared state to leak across — isolation is the architecture, not a setting.</p><span class="probe">per-tenant network · db · objects</span></div>
+      <div class="card"><h3>Secrets out of band</h3><p>Credentials live in per-environment env files injected at deploy time — never in images, never in git. Each environment holds only its own.</p><span class="probe">per-env injection · nothing in images</span></div>
+      <div class="card"><h3>TLS at the edge</h3><p>Every stack fronts through its own edge proxy with TLS termination; certificates are provisioned and renewed automatically.</p><span class="probe">auto-provisioned certs</span></div>
+      <div class="card"><h3>AuthN/AuthZ</h3><p>Database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.</p><span class="probe">rbac · sessions · token revocation</span></div>
+      <div class="card"><h3>Passwordless customers</h3><p>The customer portal has no passwords to steal: sign-in is a 15-minute magic link over SMS. The request endpoint answers identically for any input and is rate-limited, so it can't be used to probe who is a customer. Sessions are stateless JWTs — rotating one secret revokes everything.</p><span class="probe">magic links · enumeration-proof · rate-limited</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="decisions">
+  <div class="wrap">
+    <h2>Design decisions</h2>
+    <p class="sec-note">The choices interviewers ask about, answered up front.</p>
+    <div class="dec">
+      <div class="d"><h3>Compose, <span class="q">not Kubernetes?</span></h3><p>I operate multi-tenant Kubernetes at day-job scale — which is exactly why this platform doesn't use it. On a single host, Kubernetes buys autoscaling and rolling deploys this system doesn't need, at the price of a control plane to patch and a much larger failure surface to debug alone. <strong>The revisit trigger is explicit: a second host, or a genuine need for zero-downtime rollouts.</strong></p></div>
+      <div class="d"><h3>Build, <span class="q">not buy, for monitoring?</span></h3><p>Hosted observability is priced per-container and per-GB of ingest — for a single-host platform that bill would rival the entire infrastructure budget. The requirements were narrow and Docker-native, and building purpose-fit kept everything on one pane, data on-host, and <strong>SLO tracking implemented the way I practice it professionally.</strong></p></div>
+      <div class="d"><h3>Store-and-forward <span class="q">telemetry?</span></h3><p>Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The SD card is the source of truth; an uploader drains it whenever connectivity allows. <strong>For telemetry, durability beats latency.</strong></p></div>
+      <div class="d"><h3>Prompts as data, <span class="q">not code?</span></h3><p>The AI publishing prompts and style rotations live in the database &mdash; code-seeded defaults, owner overrides beside them. Prompt tuning is the highest-frequency change in the subsystem; making it a deploy would freeze iteration. <strong>The angle-level engagement scoreboard makes tuning same-day actionable.</strong></p></div>
+      <div class="d"><h3>Per-tenant stacks <span class="q">on one host?</span></h3><p>Staging shaped exactly like production catches configuration drift before customers do, and the same isolation model makes a dedicated customer instance a one-command operation instead of a re-architecture. <strong>Isolation is the product's oldest feature, not a bolt-on.</strong></p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="sec-label">published components</div>
+    <div class="repos">
+      <a href="https://github.com/rahb3rt/platform-architecture">platform-architecture</a>
+      <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>
+      <a href="https://github.com/rahb3rt/container-health-aggregator">container-health-aggregator</a>
+      <a href="https://github.com/rahb3rt/fleet-telemetry">fleet-telemetry</a>
+      <a href="https://github.com/rahb3rt/terraform-aws-static-website">terraform-aws-static-website</a>
+    </div>
+    <p class="fine">The platform has been in continuous production operation since 2023. I'm happy to walk through any component in depth — including code — in an interview. <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
