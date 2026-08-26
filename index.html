@@ -166,7 +166,7 @@
 <div class="titleblock">
   <h1>Anatomy of a Solo-Operated Production Microservice Platform</h1>
   <div class="authors"><span class="sc">Robert Davis</span></div>
-  <div class="affil">Architect, builder, and sole operator of the system described</div>
+  <div class="affil">CEO, CTO, and Principal Architect — sole developer and operator of the system described</div>
   <div class="pdate">In continuous production since 2023 · Revised August 26, 2026</div>
 </div>
 
@@ -425,6 +425,12 @@
   <li><strong>Idempotent schema bootstrap.</strong> A fresh database seeds from the API repository's checked-in schema, tracked by a marker table; re-running provisioning is safe.</li>
 </ul>
 <p>The control plane adds the tenant layer: signup-to-workspace provisioning (gated by default — an anonymous form that consumes a stack's worth of RAM is a denial-of-wallet vector), owner/member roles with expiring invitations and per-tenant audit logs, and subscription entitlements with Ed25519-signed licenses enforced at stack level for self-hosted installs. Every state change shells out to the same <code>stackctl</code> used by hand, and status is read back from its registry — so the CLI and the UI cannot drift (§11).</p>
+
+<h3>Multi-tenant productization</h3>
+<p>As of August 2026 the platform is offered multi-tenant under the product name Field Platform (fieldplatform.io). The control plane — signup and admin UI over <code>stackctl</code> — itself runs containerized on the same host and drives the host container engine over its socket (Docker-outside-of-Docker); the repository is bind-mounted into the container at an identical absolute path, so every host-path the tooling constructs remains valid on both sides of the boundary. The engine is addressed through the Docker-compatibility API rather than the native libpod endpoint, because the host's podman&nbsp;3.4 rejects newer remote clients.</p>
+<p>Each customer stack is isolated exactly as production and staging are: its own bridge network, its own MySQL and MinIO, per-stack secrets, and images tagged by git SHA — backends shared across stacks, frontends built per stack because <code>NEXT_PUBLIC</code> branding is baked at build time. Deploys remain change-detected by SHA, and an optional registry pull-through (<code>IMAGE_REGISTRY</code>) substitutes prebuilt backend images for local builds. Provisioning is fully dynamic: stack creation writes the stack's DNS record set through the Cloudflare API — CNAMEs to a single unproxied origin record, each tagged with a <code>stackctl:&lt;name&gt;</code> comment so that destroy removes exactly what create wrote — and stretches one Let's Encrypt certificate over every stack's <code>&lt;domain&gt;</code> and <code>*.&lt;domain&gt;</code> via user-owned certbot DNS-01. Renewed pem files are hot-swapped by content overwrite, preserving the inode that nginx's bind mounts track, followed by a graceful reload.</p>
+<p>Routing is two-tier behind the legacy nginx during the pre-cutover phase. nginx terminates TLS with one wildcard-per-stack certificate and forwards a single <code>*.fieldplatform.io</code> catch-all to a shared Caddy edge on an alternate port (:8880, with plain-HTTP site addresses to avoid auto-HTTPS redirect loops). The edge routes by Host header to each stack's own Caddy proxy at a published host port — container-DNS attachment is impossible for a running rootless podman&nbsp;3.x container, so a host port is the join point — and the stack proxy in turn routes to the stack's services by container DNS on the stack network. Adding a customer therefore touches no nginx configuration. A demo stack (demo.fieldplatform.io) exercises the entire path.</p>
+<p>The first tenant deploy surfaced and fixed three latent defects invisible to a long-lived single-tenant install: a stale seed schema (fresh databases missing tables the API imports at boot), frontend prebuilds resolving an ancient node in non-interactive shells, and <code>next build</code> dirtying checkouts by auto-installing <code>@types/node</code>.</p>
 
 <h2>Observability and Reliability</h2>
 <p><strong>Health aggregation.</strong> A dedicated service auto-discovers containers via the container-engine API and probes each over HTTP, MySQL, or TCP on a background loop — no manual registration, no stale check configuration.</p>

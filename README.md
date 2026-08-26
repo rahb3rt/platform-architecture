@@ -1,5 +1,7 @@
 # Anatomy of a Solo-Operated Production Microservice Platform
 
+**Robert Davis** — CEO, CTO, and Principal Architect — sole developer and operator of the system described.
+
 **A solo-built, solo-operated microservices platform running a real business in production since 2023.** *Revised August 26, 2026.*
 
 **▶ The primary, typeset version of this document — research-paper style, with figures — is served at [rahb3rt.github.io/platform-architecture](https://rahb3rt.github.io/platform-architecture/). This README is the plain-markdown mirror.**
@@ -156,6 +158,10 @@ A Node/Express service with a React SPA sits on top of `stackctl`. **It never re
 - **Serialized jobs.** Deploys are heavy and not concurrency-safe per stack, so the job runner executes exactly one at a time.
 - **Tenant security.** Owner/member roles, expiring invitations, and a per-tenant audit log.
 - **Billing and licensing.** Subscription plans with entitlements (Community through Enterprise), annual terms and add-ons, plus Ed25519-signed licenses verified and enforced at the stack level for self-hosted installs.
+
+### Multi-tenant productization — Field Platform
+
+As of August 2026 the platform is offered multi-tenant as **Field Platform** ([fieldplatform.io](https://fieldplatform.io)). The control plane runs containerized on the same host and drives the host container engine over its socket (Docker-outside-of-Docker, repo bind-mounted at an identical absolute path so host-path semantics hold), speaking the Docker-compat API because podman 3.4's libpod endpoint rejects newer remote clients. Each customer stack keeps full isolation — own bridge network, MySQL, MinIO, secrets, SHA-tagged images (backends shared, frontends per stack because `NEXT_PUBLIC` branding is baked at build time), with an optional registry pull-through (`IMAGE_REGISTRY`) for prebuilt backends. Provisioning is fully dynamic: Cloudflare-API DNS records tagged `stackctl:<name>` so destroy removes exactly what create wrote, and one Let's Encrypt certificate stretched over every stack's `<domain>` + `*.<domain>` via certbot DNS-01, hot-swapped in place (inode-preserving overwrite) and gracefully reloaded. Routing is two-tier during pre-cutover: legacy nginx terminates TLS and forwards a `*.fieldplatform.io` catch-all to a shared Caddy edge (:8880, plain-HTTP sites to avoid redirect loops), which routes by Host header to each stack's own Caddy proxy on a published host port, which routes by container DNS on the stack network — adding a customer touches no nginx config. A demo stack ([demo.fieldplatform.io](https://demo.fieldplatform.io)) exercises the whole path; the first tenant deploy surfaced and fixed three latent defects (stale seed schema, ancient node in non-interactive shells, `next build` auto-installing `@types/node`).
 
 The earlier single-business deploy script is still in the tree, untouched, as the rollback path. Its genericized multi-environment form is published at [compose-multienv-deploy](https://github.com/rahb3rt/compose-multienv-deploy).
 
