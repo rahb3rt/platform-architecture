@@ -183,63 +183,110 @@
 <p>The platform comprises fifteen services grouped the way the system actually fails: an edge tier, application services, asynchronous workers, platform services, and hardware in the field. Figure&nbsp;1 shows the topology; Table&nbsp;1 the inventory.</p>
 
 <figure>
-<svg viewBox="0 0 780 560" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
-  <!-- edge -->
-  <rect x="290" y="10" width="200" height="40" fill="#fff"/>
-  <text x="390" y="27" text-anchor="middle" stroke="none" fill="#141414">nginx edge proxy</text>
-  <text x="390" y="42" text-anchor="middle" stroke="none" fill="#555" font-size="10.5">TLS termination · routing</text>
-  <line x1="390" y1="50" x2="390" y2="86" marker-end="url(#arr)"/>
+<svg viewBox="0 0 780 1016" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
+  <!-- clients -->
+  <rect x="110" y="14" width="320" height="42" fill="#fff"/>
+  <text x="270" y="31" text-anchor="middle" stroke="none" fill="#141414">staff &amp; customer browsers</text>
+  <text x="270" y="46" text-anchor="middle" stroke="none" fill="#555" font-size="10">operations app · portal · kiosk · public site</text>
+  <rect x="540" y="14" width="200" height="42" fill="#fff"/>
+  <text x="640" y="31" text-anchor="middle" stroke="none" fill="#141414">field vehicles</text>
+  <text x="640" y="46" text-anchor="middle" stroke="none" fill="#555" font-size="10">ESP32 · OBD-II · GPS · LTE</text>
+
+  <!-- cloudflare -->
+  <line x1="270" y1="56" x2="270" y2="92" marker-end="url(#arr)"/>
+  <text x="278" y="76" stroke="none" fill="#555" font-size="10" font-style="italic">HTTPS 443 · SNI</text>
+  <rect x="120" y="96" width="300" height="42" fill="#fff"/>
+  <text x="270" y="113" text-anchor="middle" stroke="none" fill="#141414">Cloudflare</text>
+  <text x="270" y="128" text-anchor="middle" stroke="none" fill="#555" font-size="10">proxied DNS · CDN · TLS to origin</text>
+
+  <!-- router / WAN -->
+  <line x1="270" y1="138" x2="270" y2="176" marker-end="url(#arr)"/>
+  <text x="278" y="160" stroke="none" fill="#555" font-size="10" font-style="italic">proxied A records → WAN</text>
+  <rect x="120" y="180" width="300" height="42" fill="#fff"/>
+  <text x="270" y="197" text-anchor="middle" stroke="none" fill="#141414">home router / WAN</text>
+  <text x="270" y="212" text-anchor="middle" stroke="none" fill="#555" font-size="10">single public address · forwards 80 and 443</text>
+
+  <!-- LTE device path: DNS-only, bypasses the CDN -->
+  <path d="M640,56 V201 H424" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="648" y="120" stroke="none" fill="#555" font-size="10" font-style="italic">device-api: DNS-only,</text>
+  <text x="648" y="134" stroke="none" fill="#555" font-size="10" font-style="italic">bypasses the proxy</text>
+  <text x="648" y="148" stroke="none" fill="#555" font-size="10" font-style="italic">gzip NDJSON batches</text>
+
+  <!-- born host boundary -->
+  <rect x="20" y="262" width="740" height="568" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="30" y="280" stroke="none" fill="#555" font-size="10.5" font-style="italic">born — single Ubuntu host · rootless Podman</text>
+  <text x="750" y="280" text-anchor="end" stroke="none" fill="#555" font-size="10.5" font-style="italic">bridge network «landscaping» · service-name DNS</text>
+
+  <line x1="270" y1="222" x2="270" y2="292" marker-end="url(#arr)"/>
+  <rect x="170" y="296" width="200" height="56" fill="#fff" stroke-width="1.3"/>
+  <text x="270" y="314" text-anchor="middle" stroke="none" fill="#141414">nginx edge proxy</text>
+  <text x="270" y="328" text-anchor="middle" stroke="none" fill="#555" font-size="10">:80 · :443 — TLS termination</text>
+  <text x="270" y="341" text-anchor="middle" stroke="none" fill="#555" font-size="10">SNI vhost routing · device allowlist</text>
 
   <!-- client applications -->
-  <rect x="20" y="90" width="740" height="70" stroke-dasharray="3 3" stroke="#999"/>
-  <text x="30" y="105" stroke="none" fill="#555" font-size="10.5" font-style="italic">client applications</text>
-  <rect x="60" y="112" width="150" height="36" fill="#fff"/><text x="135" y="134" text-anchor="middle" stroke="none" fill="#141414">public website</text>
-  <rect x="230" y="112" width="150" height="36" fill="#fff"/><text x="305" y="129" text-anchor="middle" stroke="none" fill="#141414">operations app</text><text x="305" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">Next.js</text>
-  <rect x="400" y="112" width="120" height="36" fill="#fff"/><text x="460" y="134" text-anchor="middle" stroke="none" fill="#141414">kiosk</text>
-  <rect x="540" y="112" width="160" height="36" fill="#fff"/><text x="620" y="129" text-anchor="middle" stroke="none" fill="#141414">customer portal</text><text x="620" y="142" text-anchor="middle" stroke="none" fill="#555" font-size="10">magic-link auth</text>
-  <line x1="390" y1="160" x2="390" y2="196" marker-end="url(#arr)"/>
+  <line x1="270" y1="352" x2="270" y2="388" marker-end="url(#arr)"/>
+  <rect x="40" y="392" width="700" height="74" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="50" y="407" stroke="none" fill="#555" font-size="10.5" font-style="italic">client applications — one container per hostname</text>
+  <rect x="60" y="414" width="150" height="40" fill="#fff"/><text x="135" y="431" text-anchor="middle" stroke="none" fill="#141414">public website</text><text x="135" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">web :5015</text>
+  <rect x="228" y="414" width="160" height="40" fill="#fff"/><text x="308" y="431" text-anchor="middle" stroke="none" fill="#141414">operations app</text><text x="308" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">next-app :3000</text>
+  <rect x="406" y="414" width="120" height="40" fill="#fff"/><text x="466" y="431" text-anchor="middle" stroke="none" fill="#141414">kiosk</text><text x="466" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5009 · geofenced</text>
+  <rect x="544" y="414" width="170" height="40" fill="#fff"/><text x="629" y="431" text-anchor="middle" stroke="none" fill="#141414">customer portal</text><text x="629" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5016 · magic-link auth</text>
 
-  <!-- core API, the hub -->
-  <rect x="290" y="200" width="200" height="44" fill="#fff" stroke-width="1.6"/>
-  <text x="390" y="218" text-anchor="middle" stroke="none" fill="#141414" font-weight="bold">core API</text>
-  <text x="390" y="233" text-anchor="middle" stroke="none" fill="#555" font-size="10">60 domains · 520 endpoints · single source of truth</text>
+  <!-- core API -->
+  <line x1="390" y1="466" x2="390" y2="502" marker-end="url(#arr)"/>
+  <text x="398" y="488" stroke="none" fill="#555" font-size="10" font-style="italic">REST /api/v2 · JSON</text>
+  <rect x="290" y="506" width="200" height="52" fill="#fff" stroke-width="1.6"/>
+  <text x="390" y="524" text-anchor="middle" stroke="none" fill="#141414" font-weight="bold">core API</text>
+  <text x="390" y="538" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5002 — 60 domains · 520 endpoints</text>
+  <text x="390" y="551" text-anchor="middle" stroke="none" fill="#555" font-size="10">single source of truth</text>
 
-  <path d="M290,222 H245 V286" marker-end="url(#arr)"/>
-  <path d="M490,230 H626 V286" marker-end="url(#arr)"/>
+  <!-- nginx routes device-api straight to the API -->
+  <path d="M170,324 H32 V520 H286" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="40" y="512" stroke="none" fill="#555" font-size="10" font-style="italic">device-api → 5 allow-listed paths</text>
 
   <!-- attached services -->
-  <rect x="20" y="290" width="450" height="70" stroke-dasharray="3 3" stroke="#999"/>
-  <text x="30" y="305" stroke="none" fill="#555" font-size="10.5" font-style="italic">async &amp; integration</text>
-  <rect x="40" y="312" width="64" height="36" fill="#fff"/><text x="72" y="334" text-anchor="middle" stroke="none" fill="#141414">sms</text>
-  <rect x="118" y="312" width="72" height="36" fill="#fff"/><text x="154" y="334" text-anchor="middle" stroke="none" fill="#141414">email</text>
-  <rect x="204" y="312" width="72" height="36" fill="#fff"/><text x="240" y="334" text-anchor="middle" stroke="none" fill="#141414">mail</text>
-  <rect x="290" y="312" width="80" height="36" fill="#fff"/><text x="330" y="329" text-anchor="middle" stroke="none" fill="#141414">payments</text><text x="330" y="342" text-anchor="middle" stroke="none" fill="#555" font-size="10">reconcile</text>
-  <rect x="384" y="312" width="72" height="36" fill="#fff"/><text x="420" y="329" text-anchor="middle" stroke="none" fill="#141414">docs</text><text x="420" y="342" text-anchor="middle" stroke="none" fill="#555" font-size="10">extraction</text>
+  <path d="M290,532 H245 V594" marker-end="url(#arr)"/>
+  <path d="M490,532 H586 V594" marker-end="url(#arr)"/>
+  <rect x="30" y="598" width="440" height="74" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="40" y="613" stroke="none" fill="#555" font-size="10.5" font-style="italic">async &amp; integration workers</text>
+  <rect x="44" y="620" width="78" height="44" fill="#fff"/><text x="83" y="637" text-anchor="middle" stroke="none" fill="#141414">sms</text><text x="83" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:8080 iMessage</text>
+  <rect x="130" y="620" width="74" height="44" fill="#fff"/><text x="167" y="637" text-anchor="middle" stroke="none" fill="#141414">mail</text><text x="167" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5007 postal</text>
+  <rect x="212" y="620" width="78" height="44" fill="#fff"/><text x="251" y="637" text-anchor="middle" stroke="none" fill="#141414">email</text><text x="251" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5008 OAuth</text>
+  <rect x="298" y="620" width="84" height="44" fill="#fff"/><text x="340" y="637" text-anchor="middle" stroke="none" fill="#141414">payments</text><text x="340" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5005 reconcile</text>
+  <rect x="390" y="620" width="72" height="44" fill="#fff"/><text x="426" y="637" text-anchor="middle" stroke="none" fill="#141414">docs</text><text x="426" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5010 OCR</text>
+  <rect x="486" y="598" width="200" height="74" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="496" y="613" stroke="none" fill="#555" font-size="10.5" font-style="italic">platform</text>
+  <rect x="498" y="620" width="76" height="44" fill="#fff"/><text x="536" y="637" text-anchor="middle" stroke="none" fill="#141414">health</text><text x="536" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5011 probes</text>
+  <rect x="582" y="620" width="86" height="44" fill="#fff"/><text x="625" y="637" text-anchor="middle" stroke="none" fill="#141414">monitoring</text><text x="625" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5014 + worker</text>
 
-  <rect x="490" y="290" width="270" height="70" stroke-dasharray="3 3" stroke="#999"/>
-  <text x="500" y="305" stroke="none" fill="#555" font-size="10.5" font-style="italic">platform</text>
-  <rect x="506" y="312" width="70" height="36" fill="#fff"/><text x="541" y="329" text-anchor="middle" stroke="none" fill="#141414">health</text><text x="541" y="342" text-anchor="middle" stroke="none" fill="#555" font-size="10">probes</text>
-  <rect x="588" y="312" width="76" height="36" fill="#fff"/><text x="626" y="329" text-anchor="middle" stroke="none" fill="#141414">monitoring</text><text x="626" y="342" text-anchor="middle" stroke="none" fill="#555" font-size="10">SLOs</text>
-  <rect x="676" y="312" width="72" height="36" fill="#fff"/><text x="712" y="329" text-anchor="middle" stroke="none" fill="#141414">MySQL</text><text x="712" y="342" text-anchor="middle" stroke="none" fill="#141414">MinIO</text>
+  <!-- RUM / audit beacons from the apps into monitoring -->
+  <path d="M740,440 H754 V642 H672" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="746" y="540" stroke="none" fill="#555" font-size="10" font-style="italic" transform="rotate(90 746 540)" text-anchor="middle">RUM beacons · audit events</text>
 
-  <!-- field + external -->
-  <rect x="20" y="400" width="310" height="70" stroke-dasharray="3 3" stroke="#999"/>
-  <text x="30" y="415" stroke="none" fill="#555" font-size="10.5" font-style="italic">field hardware</text>
-  <rect x="40" y="422" width="270" height="36" fill="#fff"/><text x="175" y="438" text-anchor="middle" stroke="none" fill="#141414">vehicle telemetry — ESP32 · OBD-II · GPS</text><text x="175" y="451" text-anchor="middle" stroke="none" fill="#555" font-size="10">store-and-forward over LTE</text>
+  <!-- data plane -->
+  <path d="M390,558 V582 H478 V708" marker-end="url(#arr)"/>
+  <text x="486" y="578" stroke="none" fill="#555" font-size="10" font-style="italic">SQL :3306 · S3 :9000</text>
+  <path d="M245,672 V708" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <path d="M586,672 V750 H564" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <rect x="230" y="712" width="330" height="76" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="240" y="727" stroke="none" fill="#555" font-size="10.5" font-style="italic">data plane</text>
+  <rect x="250" y="734" width="130" height="44" fill="#fff"/><text x="315" y="751" text-anchor="middle" stroke="none" fill="#141414">MySQL</text><text x="315" y="766" text-anchor="middle" stroke="none" fill="#555" font-size="10">:3306 · db landscaping</text>
+  <rect x="410" y="734" width="130" height="44" fill="#fff"/><text x="475" y="751" text-anchor="middle" stroke="none" fill="#141414">MinIO</text><text x="475" y="766" text-anchor="middle" stroke="none" fill="#555" font-size="10">:9000 S3 · :9001 console</text>
+  <text x="390" y="812" text-anchor="middle" stroke="none" fill="#555" font-size="10" font-style="italic">deploy core-guard restarts MySQL/MinIO before every release · SQL backup on each deploy</text>
 
-  <rect x="450" y="400" width="310" height="70" stroke-dasharray="3 3" stroke="#999"/>
-  <text x="460" y="415" stroke="none" fill="#555" font-size="10.5" font-style="italic">external APIs</text>
-  <rect x="466" y="422" width="84" height="36" fill="#fff"/><text x="508" y="438" text-anchor="middle" stroke="none" fill="#141414">OpenAI</text><text x="508" y="451" text-anchor="middle" stroke="none" fill="#555" font-size="10">vision</text>
-  <rect x="562" y="422" width="90" height="36" fill="#fff"/><text x="607" y="438" text-anchor="middle" stroke="none" fill="#141414">Meta Graph</text><text x="607" y="451" text-anchor="middle" stroke="none" fill="#555" font-size="10">publish · insights</text>
-  <rect x="664" y="422" width="84" height="36" fill="#fff"/><text x="706" y="438" text-anchor="middle" stroke="none" fill="#141414">Google</text><text x="706" y="451" text-anchor="middle" stroke="none" fill="#555" font-size="10">Business Profile</text>
-
-  <!-- telemetry → core API: threads the channel between service tiers -->
-  <path d="M175,422 V382 H480 V268 H440 V248" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-  <text x="322" y="377" stroke="none" fill="#555" font-size="10" font-style="italic">gzip NDJSON / LTE</text>
-
-  <!-- core API → external APIs: right-gutter route -->
-  <path d="M490,210 H768 V435 H764" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-  <text x="775" y="330" stroke="none" fill="#555" font-size="10" font-style="italic" transform="rotate(90 771 330)" text-anchor="middle">captions · publish · insights</text>
+  <!-- external services -->
+  <line x1="390" y1="832" x2="390" y2="912" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+  <text x="398" y="875" stroke="none" fill="#555" font-size="10" font-style="italic">outbound HTTPS — AI · social · OAuth · payments · mail · iMessage · firmware</text>
+  <rect x="20" y="916" width="740" height="76" stroke-dasharray="3 3" stroke="#999"/>
+  <text x="30" y="931" stroke="none" fill="#555" font-size="10.5" font-style="italic">external services</text>
+  <rect x="36" y="940" width="84" height="40" fill="#fff"/><text x="78" y="956" text-anchor="middle" stroke="none" fill="#141414">OpenAI</text><text x="78" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">vision · captions</text>
+  <rect x="130" y="940" width="96" height="40" fill="#fff"/><text x="178" y="956" text-anchor="middle" stroke="none" fill="#141414">Meta Graph</text><text x="178" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">publish · insights</text>
+  <rect x="236" y="940" width="90" height="40" fill="#fff"/><text x="281" y="956" text-anchor="middle" stroke="none" fill="#141414">Google</text><text x="281" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">OAuth · GBP</text>
+  <rect x="336" y="940" width="80" height="40" fill="#fff"/><text x="376" y="956" text-anchor="middle" stroke="none" fill="#141414">Stripe</text><text x="376" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">payments</text>
+  <rect x="426" y="940" width="100" height="40" fill="#fff"/><text x="476" y="956" text-anchor="middle" stroke="none" fill="#141414">Gmail · Lob</text><text x="476" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">email · postal</text>
+  <rect x="536" y="940" width="110" height="40" fill="#fff"/><text x="591" y="956" text-anchor="middle" stroke="none" fill="#141414">BlueBubbles</text><text x="591" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">iMessage bridge</text>
+  <rect x="656" y="940" width="88" height="40" fill="#fff"/><text x="700" y="956" text-anchor="middle" stroke="none" fill="#141414">GitHub</text><text x="700" y="970" text-anchor="middle" stroke="none" fill="#555" font-size="10">OTA firmware</text>
+  <text x="390" y="1010" text-anchor="middle" stroke="none" fill="#555" font-size="10" font-style="italic">inbound webhooks (Stripe · Seam · Meta) re-enter at the top of the diagram through Cloudflare at api.rjlandscaping.co</text>
 
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
@@ -247,7 +294,7 @@
     </marker>
   </defs>
 </svg>
-<figcaption>System topology. Clients enter through the edge; every path converges on the core API at the center, with the async workers and platform services attached beneath it. Solid arrows are synchronous request paths; dashed arrows are asynchronous or third-party flows.</figcaption>
+<figcaption>End-to-end topology and data flow. Browser traffic resolves through Cloudflare-proxied DNS and a single port-forward to the host, where nginx terminates TLS and routes by SNI to one container per hostname; every application converges on the core API, with workers, platform services, and the data plane attached beneath it on the rootless-Podman bridge network. Vehicle telemetry deliberately bypasses the CDN: a DNS-only hostname resolves straight to the WAN address, and nginx forwards only five allow-listed device endpoints. The kiosk and portal additionally open direct SQL connections for latency-sensitive reads. Solid arrows are synchronous request paths; dashed arrows are asynchronous, filtered, or third-party flows.</figcaption>
 </figure>
 
 <div class="tablewrap">
