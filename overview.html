@@ -503,6 +503,21 @@
   </div>
 </section>
 
+<section id="phone-line">
+  <div class="wrap">
+    <h2>Messaging &amp; voice over an iPhone</h2>
+    <p class="sec-note">The business number is a real iPhone. A maintained BlueBubbles fork on an office Mac turns it into a texting and calling backend; the SMS service is the only thing that talks to it.</p>
+    <div class="rel">
+      <div class="card"><h3>Telephony gateway</h3><p>Relays messages, brokers WebRTC signalling, pushes live call status over a WebSocket, checks the app&rsquo;s token and permissions on every call action, and syncs recordings and transcripts into the platform. Call audio flows browser-to-Mac, never through it.</p><span class="probe">fastapi &middot; /v1/phone &middot; wss</span></div>
+      <div class="card"><h3>Texting that admits failure</h3><p>One send in flight and a circuit breaker that fast-fails for 45&nbsp;s after two connect failures. iMessages the phone can&rsquo;t take &mdash; reported late, or as an error inside a 200 &mdash; are resent once as SMS/RCS, loop-guarded.</p><span class="probe">circuit breaker &middot; sms fallback</span></div>
+      <div class="card"><h3>Browser call bridge</h3><p>A helper injected into the Mac&rsquo;s Phone app dials, answers and hangs up without prompts; virtual audio devices and a hidden window bridge the call to the browser over WebRTC.</p><span class="probe">telephonyutilities &middot; webrtc &middot; virtual audio</span></div>
+      <div class="card"><h3>History, voicemail, recordings</h3><p>Call history and voicemail read straight from the databases the Mac syncs with the iPhone; recordings split per speaker and transcribed on-device, so no audio goes to a third-party speech API.</p><span class="probe">read-only &middot; on-device asr</span></div>
+      <div class="card"><h3>A consumer app as infrastructure</h3><p>Commands pinned to the Phone app&rsquo;s main thread, restart-and-retry on a silent dial, stale ringing cleared after 90&nbsp;s, and a wedged system daemon restarted before the OS watchdog kills the Phone app.</p><span class="probe">self-healing &middot; 0x8badf00d avoided</span></div>
+      <div class="card"><h3>Hardened fork</h3><p>Per-address throttling of distinct wrong passwords, no global lockout to weaponize, forwarded-for read from the trusted end, and signed, notarized builds that auto-update from the fork&rsquo;s own releases.</p><span class="probe">429 &middot; notarized &middot; self-updating</span></div>
+    </div>
+  </div>
+</section>
+
 <section id="ai-publishing">
   <div class="wrap">
     <h2>AI-assisted publishing, closed loop</h2>
@@ -602,6 +617,7 @@
       <div class="d"><h3>Build, <span class="q">not buy, for monitoring?</span></h3><p>Hosted observability is priced per-container and per-GB of ingest — for a single-host platform that bill would rival the entire infrastructure budget. The requirements were narrow and Docker-native, and building purpose-fit kept everything on one pane, data on-host, and <strong>SLO tracking implemented the way I practice it professionally.</strong></p></div>
       <div class="d"><h3>Store-and-forward <span class="q">telemetry?</span></h3><p>Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The SD card is the source of truth; an uploader drains it whenever connectivity allows. <strong>For telemetry, durability beats latency.</strong></p></div>
       <div class="d"><h3>Prompts as data, <span class="q">not code?</span></h3><p>The AI publishing prompts and style rotations live in the database &mdash; code-seeded defaults, owner overrides beside them. Prompt tuning is the highest-frequency change in the subsystem; making it a deploy would freeze iteration. <strong>The angle-level engagement scoreboard makes tuning same-day actionable.</strong></p></div>
+      <div class="d"><h3>An iPhone, <span class="q">not a telephony API?</span></h3><p>Porting the number would have broken every customer&rsquo;s iMessage thread and made the owner&rsquo;s phone a second system. The price is a Mac per line and private frameworks a macOS update can break &mdash; contained by a single gateway, fail-fast sends, SMS fallback and health alerts. <strong>A line is configuration, so a provider-backed line can sit beside it.</strong></p></div>
       <div class="d"><h3>Per-tenant stacks <span class="q">on one host?</span></h3><p>Staging shaped exactly like production catches configuration drift before customers do, and the same isolation model makes a dedicated customer instance a one-command operation instead of a re-architecture. <strong>Isolation is the product's oldest feature, not a bolt-on.</strong></p></div>
     </div>
   </div>

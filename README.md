@@ -47,6 +47,11 @@ flowchart TB
         TELEM[Vehicle telemetry<br/>ESP32 / OBD-II / GPS / LTE]
     end
 
+    subgraph office [Office LAN — the business phone line]
+        BB[BlueBubbles fork<br/>macOS · Electron · Private API]
+        IPHONE[iPhone<br/>the business number]
+    end
+
     subgraph ext [External APIs]
         OPENAI[OpenAI<br/>vision captioning]
         META[Meta Graph<br/>social publish + insights]
@@ -60,6 +65,9 @@ flowchart TB
     TELEM -->|gzip NDJSON over LTE| API
     API --> OPENAI & META & GBPX
     KIOSK --> PUSH
+    SMS <-->|messages · call control · webhooks| BB
+    BB <-->|Continuity: SMS/RCS · calls · voicemail| IPHONE
+    APP -.->|WebRTC call audio, peer to peer| BB
     SMS -.->|OTLP metrics| MON
     HEALTH -.->|HTTP / MySQL / TCP probes| apps & workers & platform
     MON -.->|container stats, logs, SLOs| apps & workers & platform
@@ -74,7 +82,8 @@ flowchart TB
 | Operations dashboard | Internal operations app | Next.js |
 | Kiosk | Crew timeclock and field app — offline-first, server-side sessions, native push | Next.js 15 / React 19, Capacitor iOS/Android shell |
 | Customer portal | Balance, invoices, next visit, service requests | Next.js 15, passwordless magic-link auth |
-| SMS + voice | Texting with iMessage→SMS fallback; browser softphone, voicemail, recordings | Python, FastAPI |
+| SMS + voice | Telephony gateway — the only service that talks to the phone-line Macs: texting with iMessage→SMS fallback, call control, voicemail, recordings | Python, FastAPI |
+| Phone line (BlueBubbles fork) | iMessage/SMS server and call bridge on an office Mac paired with the business iPhone | TypeScript, Electron, injected Private API helpers |
 | Email / Mail | Inbox sync and cache; quote, invoice and contract mail from DB-stored templates | Node, HTML templating |
 | Payment reconciliation | Matches external payments to invoices | Python |
 | Document extraction | Parses inbound documents into structured data | Python |
@@ -111,6 +120,31 @@ The social subsystem is a small production case study in operating an LLM featur
 - **Rate-limit-aware caching.** Third-party feeds are layered: browser persistence paints instantly, a server-side TTL cache absorbs passive traffic, and an explicit refresh is the only real upstream fetch — with a floor so even button-mashing can't burn the API quota.
 - **Failure surfacing.** Publish failures, OAuth tokens flipped to needs-reconnect *before* expiry, and new-comment deltas all flow into the app's notification stream via an event table — piggybacked on the publisher's existing cadence, costing no extra polling.
 - **Media normalization at the door.** Phone uploads (HEIC/AVIF) are decoded — WASM for the patent-encumbered codec — and re-encoded to platform-safe JPEG at upload; serving goes through on-the-fly WebP thumbnails with immutable cache headers.
+
+## Messaging and Voice: an iPhone as the Carrier
+
+The business's phone number is a real iPhone, and it stays that way. Instead of porting the number to a cloud telephony provider, texting **and calling** run through that iPhone via an office Mac running my maintained fork of [BlueBubbles](https://github.com/BlueBubblesApp/bluebubbles-server) (an open-source macOS iMessage server). Customers keep texting and calling the number they have always had, iMessage threads keep working, and the operations app gets a full phone: inbox, softphone, call history, voicemail, recordings and transcripts.
+
+```
+browser (operations app) ──HTTPS/WSS──▶ telephony gateway (/v1/phone/*) ──HTTP, LAN──▶ BlueBubbles on a Mac ◀──Continuity──▶ iPhone
+          │                                     │                                         (one Mac per phone line)
+          └──────── WebRTC call audio, peer to peer ──────────────────────────────────────▶ Mac
+                                                └──▶ core API (messages, call events, recordings) · MinIO (attachments, audio)
+```
+
+**The gateway.** The SMS service is the only component that talks to the Macs. It relays messages both ways, keeps the BlueBubbles credentials server-side, verifies the operations app's JWT and its `message:write` permission on every phone call, pushes live call status over a WebSocket, and carries recordings and transcripts off the Mac into object storage and the CRM — with a reconciler that replays any the CRM missed. A *line* is one Mac plus one iPhone number; adding a line is configuration. Call audio never passes through the gateway: it only brokers the WebRTC offer/answer, then browser and Mac stream directly.
+
+**Texting.** Inbound messages arrive as webhooks, are normalized, have their attachments fetched by GUID into MinIO, and are forwarded to the CRM. Outbound sends are deliberately narrow — one in-flight request, a small keep-alive pool with a background probe, and a circuit breaker that fast-fails new sends for 45 s after two consecutive connect failures, so a sleeping Mac produces a quick, honest error instead of a pile of hung requests. Messages.app will accept an iMessage send to a number that isn't on iMessage and report the failure only afterwards, or answer HTTP 200 with an error inside; both are now treated as failures and resent once on the SMS chat (delivered over RCS where the phone has it), guarded so a resend can never loop.
+
+**Calls, history and voicemail.** The fork reads the call history and voicemail databases the Mac keeps in sync with the iPhone — read-only, under Full Disk Access — and fires events for new, missed and voicemailed calls, which the gateway relays into the app's notification stream. The watchers follow each database's *directory* rather than its WAL file, because the owning daemons delete and recreate the WAL and a watcher on the old file goes silent; a one-minute poll backs up missed filesystem events.
+
+**The call bridge.** To place a call from a browser, a helper injected into the Mac's Phone app dials through the system telephony framework (no "click to call" prompt), answers, declines, sends keypad tones and reports call state. During a call the Mac's audio is switched to two virtual audio devices, and a hidden window bridges them to the browser over WebRTC — call audio out, the browser's microphone in — restoring the previous devices afterwards, or on next start if the app quit mid-call. Browsers expose the microphone only on secure origins, so the Mac also serves the app over HTTPS on the LAN with a self-signed certificate it regenerates as its hostname and addresses change.
+
+**Recording and transcription on the device.** Each party is recorded on its own 16 kHz track and transcribed on the Mac by Apple's on-device speech recognition, then merged into a single You/Them transcript. No call audio is sent to a third-party speech API.
+
+**Keeping a consumer app alive as infrastructure.** The Phone app was never meant to be a server, so the fork carries the scar tissue: helper commands stay on the Phone app's main thread (the call center object crashes it from any other queue); a dial with no reply restarts the Phone app, retries, then falls back to a `tel:` handoff; a ringing call is cleared after 90 s without an update so a Phone app crash can't strand the UI on "incoming call"; and a health monitor counts recents-lookup timeouts in the unified log every two minutes and restarts the wedged system daemon before the OS watchdog (`0x8BADF00D`) kills the Phone app.
+
+**Hardening and delivery.** The fork throttles password guessing per client address — counting *distinct* wrong passwords (3/s, 10/min, 50/day) so a client stuck on a stale password can't lock itself out, refusing to let a correct password bypass an active block, and attributing clients by the rightmost non-local forwarded hop rather than the client-writable leftmost one. It deliberately has no global lockout, which would hand an attacker a way to deny every legitimate client. Builds are signed and notarized, and the app auto-updates from the fork's own releases. The gateway exports telephony metrics and event logs to the monitoring dashboard over OTLP, with p95 histograms, alert rules and a public synthetic check.
 
 ## CI/CD
 
@@ -295,6 +329,8 @@ oct 22  a4cdda2  Kiosk: the server decides who is signed in, not the page
 **Prompts as data, not code.** The AI publishing prompts, style rotations, and posting parameters live in the database with code-seeded defaults and owner overrides side by side. Prompt tuning is the highest-frequency change in the subsystem; making it a deploy would either freeze iteration or turn every voice tweak into a release. The trade is a settings table and a seeding pass at startup — cheap — against a feedback loop (angle-level engagement metrics) that can actually be acted on the same day.
 
 **Rollback that doesn't share the failure.** An early auto-rollback failed exactly the way the deploy had — a container-engine socket path that didn't resolve from inside the containerized control plane — and left the service gone. A rollback that depends on the same precondition as the deploy it's protecting is not a safety net. Rollbacks now reuse images that already ran, health-gated, and fleet rolls stop at the first failure rather than trusting the next stack to be different.
+
+**An iPhone, not a telephony API.** Porting the number to a cloud provider would have been the conventional move and the easier one to operate. It would also have broken every customer's existing iMessage thread, changed how the business looks in their messages, and turned a phone the owner already carries into a second system. The cost of keeping the iPhone is real: a Mac on the LAN is a single point of failure per line, and the call bridge leans on private frameworks a macOS update can break. It is contained by design — the gateway is the only thing that talks to the Mac, sends fail fast behind a circuit breaker, failed iMessages fall back to SMS, and the monitoring dashboard alerts on the line's health — and the escape hatch stays open: a line is configuration, so a provider-backed line could sit beside the iPhone without touching the app.
 
 **One source of truth for deploys.** The control plane could have talked to the container engine directly and been faster to build. Instead every state change shells out to the same `stackctl` I use by hand, and status is read back from its registry. A second implementation of "what does deployed mean" is a guarantee that the UI and the CLI will eventually disagree — usually during an incident, when the dashboard is the thing you're trusting. Shelling out costs a process spawn; disagreeing costs the outage.
 
