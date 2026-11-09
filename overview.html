@@ -252,10 +252,10 @@
     <div class="tier">
       <div class="tier-name">applications</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic — 60 domains, 520 endpoints; the single source of truth</div><span class="svc-stack">Python · Flask · MySQL</span></div>
+        <div class="svc" style="animation-delay:.00s"><div class="svc-top"><span class="dot"></span><span class="svc-name">core api</span></div><div class="svc-role">Business logic — 80 domains, 716 endpoints; the single source of truth</div><span class="svc-stack">Python · Flask · MySQL</span></div>
         <div class="svc" style="animation-delay:.06s"><div class="svc-top"><span class="dot"></span><span class="svc-name">operations dashboard</span></div><div class="svc-role">Internal app: scheduling, invoicing, customers</div><span class="svc-stack">Next.js</span></div>
         <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">public website</span></div><div class="svc-role">Customer-facing site</div><span class="svc-stack">Next.js</span></div>
-        <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">On-site self-service</div><span class="svc-stack">TypeScript</span></div>
+        <div class="svc" style="animation-delay:.10s"><div class="svc-top"><span class="dot"></span><span class="svc-name">kiosk</span></div><div class="svc-role">Crew field app — geofenced timeclock, offline-first writes, native push</div><span class="svc-stack">Next.js 15 · Capacitor iOS/Android</span></div>
         <div class="svc" style="animation-delay:.12s"><div class="svc-top"><span class="dot"></span><span class="svc-name">customer portal</span></div><div class="svc-role">Balance, invoices, next visit, service requests — magic-link sign-in, no passwords</div><span class="svc-stack">Next.js 15 · passwordless JWT</span></div>
       </div>
     </div>
@@ -263,7 +263,7 @@
     <div class="tier">
       <div class="tier-name">async &amp; integration</div>
       <div class="board">
-        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms</span></div><div class="svc-role">Two-way customer texting</div><span class="svc-stack">Python</span></div>
+        <div class="svc" style="animation-delay:.01s"><div class="svc-top"><span class="dot"></span><span class="svc-name">sms + voice</span></div><div class="svc-role">Two-way texting with SMS fallback; browser softphone, voicemail, recordings</div><span class="svc-stack">Python · FastAPI</span></div>
         <div class="svc" style="animation-delay:.14s"><div class="svc-top"><span class="dot"></span><span class="svc-name">email ingest &amp; send</span></div><div class="svc-role">Inbound parsing and outbound delivery</div><span class="svc-stack">Node</span></div>
         <div class="svc" style="animation-delay:.02s"><div class="svc-top"><span class="dot"></span><span class="svc-name">transactional mail</span></div><div class="svc-role">Templated customer notifications</div><span class="svc-stack">HTML templating</span></div>
         <div class="svc" style="animation-delay:.18s"><div class="svc-top"><span class="dot"></span><span class="svc-name">payment reconciliation</span></div><div class="svc-role">Matches external payments to invoices</div><span class="svc-stack">Python</span></div>
@@ -295,7 +295,7 @@
     <h2>Data flow</h2>
     <p class="sec-note"><span style="color:var(--ok)">Green</span> is the request path, <span style="color:var(--accent)">blue</span> is data and telemetry, dashed gray is observability, and the <span style="color:var(--amber)">amber boundary</span> is one tenant stack — everything inside it is replicated per tenant.</p>
     <div style="overflow-x:auto">
-    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to four frontends and a core API with 60 domains and 520 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
+    <svg viewBox="0 0 960 700" role="img" aria-label="Data-flow diagram: users and field vehicles outside an isolated tenant boundary; inside, nginx routes to four frontends and a core API with 80 domains and 716 endpoints; async workers feed the API; the API writes to MySQL and MinIO; health and monitoring probe every service" style="width:100%;min-width:720px;display:block">
       <defs>
         <marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FDF8C"/></marker>
         <marker id="m-ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6FB3FF"/></marker>
@@ -341,7 +341,7 @@
       <text class="dg-s" x="360" y="250">next.js</text>
       <rect x="500" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
       <text class="dg-t" x="580" y="234">kiosk</text>
-      <text class="dg-s" x="580" y="250">typescript</text>
+      <text class="dg-s" x="580" y="250">next.js · offline-first</text>
       <rect x="720" y="214" width="160" height="46" rx="8" fill="#161F2E" stroke="#24344A"/>
       <text class="dg-t" x="800" y="234">customer portal</text>
       <text class="dg-s" x="800" y="250">magic-link · next.js</text>
@@ -349,7 +349,7 @@
       <!-- core api (expanded) -->
       <rect x="220" y="300" width="520" height="128" rx="8" fill="#161F2E" stroke="#3A557A"/>
       <text class="dg-t" x="480" y="324" style="font-size:15px">core api</text>
-      <text class="dg-s" x="480" y="341">flask · 60 domains · 520 endpoints · source of truth</text>
+      <text class="dg-s" x="480" y="341">flask · 80 domains · 716 endpoints · source of truth</text>
       <line x1="244" y1="352" x2="716" y2="352" stroke="#24344A"/>
       <text class="dg-f" x="480" y="373">invoicing · payments · statements · quotes · contracts + e-sign</text>
       <text class="dg-f" x="480" y="392">jobs · scheduling · route optimization · crews · timeclock · payroll</text>
@@ -406,7 +406,7 @@
     </svg>
     </div>
 
-    <div class="sec-label" style="margin-top:30px">core api surface — 60 route domains · 520 endpoints</div>
+    <div class="sec-label" style="margin-top:30px">core api surface — 80 route domains · 716 endpoints</div>
     <div class="api-surface">
       <div class="asg"><strong>billing</strong><span>invoicing</span><span>payments</span><span>payment methods</span><span>statements</span><span>quotes</span><span>customer credit</span><span>expenses</span></div>
       <div class="asg"><strong>contracts</strong><span>templates</span><span>e-signing</span><span>audit trail</span></div>
@@ -433,9 +433,12 @@
         <div class="step"><span class="k">publish</span>ghcr.io</div>
         <div class="arrow">→</div>
         <div class="step"><span class="k">deploy</span>stackctl deploy &lt;env&gt;</div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="k">gate</span>health probe · auto-rollback<br>on unhealthy or crashed</div>
       </div>
     </div>
     <p class="pipe-note">The deploy step is one idempotent tool: it pulls service repos, pre-builds the Next.js apps, provisions per-environment infrastructure, regenerates the edge routes, and brings the stack up under Docker or Podman — rebuilding only the services whose commit SHA actually moved. Backend images are built once per SHA and shared across every stack; the Next.js frontends bake per-environment branding at build time, so those build per stack. The genericized form is published as <a href="https://github.com/rahb3rt/compose-multienv-deploy">compose-multienv-deploy</a>.</p>
+    <p class="pipe-note"><strong>Booting is not passing.</strong> Every release is health-gated; one that fails is replaced by the last known-good image and recorded in a release ledger, and any retained release can be restored by SHA. Fleet rolls upgrade every tenant demo-first and stop at the first failure; drift detection compares what is live against source and never pulls, so it is safe on a timer. On the original production host, swaps are blue-green behind a reload-only nginx router — zero downtime with no orchestrator.</p>
   </div>
 </section>
 
@@ -490,10 +493,12 @@
     <p class="sec-note">The tooling is built in-house, sized to the platform, and runs as part of it.</p>
     <div class="rel">
       <div class="card"><h3>Health aggregation</h3><p>A dedicated service discovers containers through the Docker/Podman API and probes each on a background loop. No manual registration, no stale check configs.</p><span class="probe">probes: http · mysql · tcp</span></div>
-      <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets</span></div>
-      <div class="card"><h3>Backups</h3><p>The control-plane process drives hourly per-tenant database backups — one gzipped dump of a stack's business and monitoring schemas, written drop-and-create so a restore rebuilds them whole, and pruned to the newest 72. Restore plus redeploy is the entire disaster-recovery story, by design.</p><span class="probe">hourly · per-tenant · 72 kept</span></div>
+      <div class="card"><h3>Monitoring &amp; SLOs</h3><p>Purpose-built dashboard: container metrics, log aggregation, alerting, and SLO tracking against explicit targets, behind database-backed RBAC.</p><span class="probe">slo targets · error budgets · sample floors · otlp</span></div>
+      <div class="card"><h3>Backups</h3><p>The control-plane process drives hourly per-tenant database backups — one gzipped dump of a stack's business and monitoring schemas, written drop-and-create so a restore rebuilds them whole, and pruned to the newest 72. Each dump is validated by its completion marker, not its size. Restore plus redeploy is the entire disaster-recovery story, by design.</p><span class="probe">hourly · per-tenant · 72 kept · completeness-checked</span></div>
       <div class="card"><h3>Deploy preflight</h3><p>Core datastores are verified before any service swap &mdash; started if stopped, deploy aborted if they won't come up. Deploying against a down datastore would bake dead endpoints into every rebuilt container.</p><span class="probe">mysql &middot; object storage &middot; abort-on-fail</span></div>
-      <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte</span></div>
+      <div class="card"><h3>Design-for-failure at the edge</h3><p>Vehicle firmware assumes the network is lying: every reading lands on SD first, then uploads as gzip batches with retry and backoff. A modem watchdog resets the radio, then reboots, when nothing gets through. Late data is fine; lost data is not.</p><span class="probe">store-and-forward · ndjson · lte · modem watchdog</span></div>
+      <div class="card"><h3>Canary firmware rollouts</h3><p>Over-the-air updates reach canary trucks first, promote fleet-wide once one validates, and halt on a rollback. The update lane runs first in every loop, so a truck can always take a fix. A virtual truck runs the whole firmware against the real API in CI.</p><span class="probe">canary · auto-promote · auto-halt</span></div>
+      <div class="card"><h3>Offline-first crew app</h3><p>Every kiosk write carries an idempotency key the server remembers for 30 days, so a replay after reconnect applies exactly once. Rejected writes land in a visible &ldquo;didn&rsquo;t sync&rdquo; list instead of vanishing.</p><span class="probe">idempotency keys · exactly-once replay</span></div>
     </div>
   </div>
 </section>
@@ -539,6 +544,37 @@
         <div class="pm-row"><span class="d">aug 25</span><span class="h">8700923</span><span class="m">Bump runtime image to node:20-alpine for sharp 0.35</span></div>
       </div>
     </div>
+    <div class="pm" style="margin-top:28px">
+      <div class="pm-eyebrow">postmortem &middot; jul&ndash;oct 2026 &middot; fleet firmware</div>
+      <h3>The update path must survive</h3>
+      <p>All four field trucks went dark. Listing the SD-card upload backlog was quadratic &mdash; 848 files took 338 seconds &mdash; so the main loop ran once every six minutes and the firmware-update path, sharing that loop, starved. The trucks couldn&rsquo;t receive the fix for the thing starving them. Separately, a firmware release had gone fleet-wide in one step and reboot-looped the trucks that took it.</p>
+      <p><strong>The lesson:</strong> the ability to receive an update must never depend on the rest of the system being healthy &mdash; and no single update may break that ability everywhere at once. Hence: update lane first, canary rollouts, and a virtual truck in CI.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">oct 12</span><span class="h">98d3b65</span><span class="m">fix: a spool backlog froze the main loop for minutes per pass</span></div>
+        <div class="pm-row"><span class="d">oct 12</span><span class="h">e129ccd</span><span class="m">ota: run the update lane first and in bursts so a truck can always take a fix</span></div>
+        <div class="pm-row"><span class="d">oct 12</span><span class="h">3fbb9ec</span><span class="m">ota: canary rollouts that promote or halt themselves; ingest is atomic</span></div>
+        <div class="pm-row"><span class="d">oct 12</span><span class="h">d1ab6b1</span><span class="m">test: virtual truck, the whole firmware on a simulated truck against the real API</span></div>
+      </div>
+    </div>
+    <div class="pm" style="margin-top:28px">
+      <div class="pm-eyebrow">postmortem &middot; september 2026 &middot; backups</div>
+      <h3>The backup that fit</h3>
+      <p>The pre-deploy backup is a hard gate, so when it started failing, nothing could deploy. Layer one: mysqldump wanted a global privilege tenant users deliberately lack, and the error went to <code>/dev/null</code>. Layer two was worse: podman 3.4 drops the tail of long <code>exec</code> streams, so the dump came out at <strong>0.1% of the database</strong> &mdash; 128&nbsp;KB of 117&nbsp;MB &mdash; and a &ldquo;larger than 512 bytes&rdquo; check passed it.</p>
+      <p><strong>The lesson:</strong> check a backup for completeness, not size. A swallowed error usually hides a worse one beneath it.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">sep 04</span><span class="h">443e93b</span><span class="m">backup: mysqldump needs --no-tablespaces, and a failure must say why</span></div>
+        <div class="pm-row"><span class="d">sep 04</span><span class="h">6183ad5</span><span class="m">backup: the dump was being truncated to 0.1% of the database</span></div>
+      </div>
+    </div>
+    <div class="pm" style="margin-top:28px">
+      <div class="pm-eyebrow">postmortem &middot; october 2026 &middot; security</div>
+      <h3>Identity from the client</h3>
+      <p>Every kiosk route believed the employee id the page sent: anyone who could reach the kiosk could clock in as anyone, and the PIN had no attempt limit. Identity moved to the server &mdash; a hashed session row behind an HttpOnly cookie, checked on every call, with tiered lockout and crew-scoped authorization.</p>
+      <p><strong>The lesson:</strong> identity is something the server establishes, never something the client asserts.</p>
+      <div class="pm-tl">
+        <div class="pm-row"><span class="d">oct 22</span><span class="h">a4cdda2</span><span class="m">Kiosk: the server decides who is signed in, not the page</span></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -551,6 +587,7 @@
       <div class="card"><h3>Secrets out of band</h3><p>Credentials live in per-environment env files injected at deploy time — never in images, never in git. Each environment holds only its own.</p><span class="probe">per-env injection · nothing in images</span></div>
       <div class="card"><h3>TLS at the edge</h3><p>Every stack fronts through its own edge proxy with TLS termination; certificates are provisioned and renewed automatically.</p><span class="probe">auto-provisioned certs</span></div>
       <div class="card"><h3>AuthN/AuthZ</h3><p>Database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.</p><span class="probe">rbac · sessions · token revocation</span></div>
+      <div class="card"><h3>API keys &amp; audited impersonation</h3><p>API keys are stored only as SHA-256 hashes and shown once, with scoped permissions; no key can manage keys. Admin &ldquo;view as&rdquo; issues a one-hour token stamped with who is impersonating, and every start, end and denial lands in the login audit.</p><span class="probe">hashed keys · impersonated_by · login audit</span></div>
       <div class="card"><h3>Passwordless customers</h3><p>The customer portal has no passwords to steal: sign-in is a 15-minute magic link over SMS. The request endpoint answers identically for any input and is rate-limited, so it can't be used to probe who is a customer. Sessions are stateless JWTs — rotating one secret revokes everything.</p><span class="probe">magic links · enumeration-proof · rate-limited</span></div>
     </div>
   </div>
@@ -561,7 +598,7 @@
     <h2>Design decisions</h2>
     <p class="sec-note">The choices interviewers ask about, answered up front.</p>
     <div class="dec">
-      <div class="d"><h3>Compose, <span class="q">not Kubernetes?</span></h3><p>I operate multi-tenant Kubernetes at day-job scale — which is exactly why this platform doesn't use it. On a single host, Kubernetes buys autoscaling and rolling deploys this system doesn't need, at the price of a control plane to patch and a much larger failure surface to debug alone. <strong>The revisit trigger is explicit: a second host, or a genuine need for zero-downtime rollouts.</strong></p></div>
+      <div class="d"><h3>Compose, <span class="q">not Kubernetes?</span></h3><p>I operate multi-tenant Kubernetes at day-job scale — which is exactly why this platform doesn't use it. On a single host, Kubernetes buys autoscaling and rolling deploys this system doesn't need, at the price of a control plane to patch and a much larger failure surface to debug alone. <strong>The revisit trigger was a second host, or a genuine need for zero-downtime rollouts.</strong> The second arrived and was met without it: blue-green swaps behind a reload-only nginx router.</p></div>
       <div class="d"><h3>Build, <span class="q">not buy, for monitoring?</span></h3><p>Hosted observability is priced per-container and per-GB of ingest — for a single-host platform that bill would rival the entire infrastructure budget. The requirements were narrow and Docker-native, and building purpose-fit kept everything on one pane, data on-host, and <strong>SLO tracking implemented the way I practice it professionally.</strong></p></div>
       <div class="d"><h3>Store-and-forward <span class="q">telemetry?</span></h3><p>Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The SD card is the source of truth; an uploader drains it whenever connectivity allows. <strong>For telemetry, durability beats latency.</strong></p></div>
       <div class="d"><h3>Prompts as data, <span class="q">not code?</span></h3><p>The AI publishing prompts and style rotations live in the database &mdash; code-seeded defaults, owner overrides beside them. Prompt tuning is the highest-frequency change in the subsystem; making it a deploy would freeze iteration. <strong>The angle-level engagement scoreboard makes tuning same-day actionable.</strong></p></div>

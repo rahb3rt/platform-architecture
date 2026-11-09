@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anatomy of a Solo-Operated Production Microservice Platform — Robert Davis</title>
-<meta name="description" content="A research-paper-style account of a solo-built, solo-operated production platform: 15 services, networking, deployment, observability, AI publishing, and failure case studies. In production since 2023.">
+<meta name="description" content="A research-paper-style account of a solo-built, solo-operated production platform: 15 services, networking, health-gated deployment, observability, AI publishing, fleet firmware, and failure case studies. In production since 2023.">
 <meta property="og:title" content="Anatomy of a Solo-Operated Production Microservice Platform">
 <meta property="og:description" content="One engineer. Fifteen services. Production since 2023. The full architecture, with diagrams and postmortems.">
 <meta property="og:image" content="https://rahb3rt.github.io/platform-architecture/og.png">
@@ -167,12 +167,12 @@
   <h1>Anatomy of a Solo-Operated Production Microservice Platform</h1>
   <div class="authors"><span class="sc">Robert Davis</span></div>
   <div class="affil">CEO, CTO, and Principal Architect</div>
-  <div class="pdate">In continuous production since 2023 · Revised August 26, 2026</div>
+  <div class="pdate">In continuous production since 2023 · Revised November 9, 2026</div>
 </div>
 
 <div class="abstract">
   <span class="lead">Abstract</span>
-  This document describes the architecture, operation, and failure history of a production platform designed, built, and operated end-to-end by a single engineer: fifteen services and embedded vehicle hardware behind one edge, with CI/CD, observability, SLO tracking, hourly backups, and a self-service multi-tenant control plane. The system runs a real business — customers, payments, field crews, vehicles — and has processed 17,000+ scheduled jobs, 5,200+ invoices, and 100,000+ vehicle telemetry readings. We present the service topology, the networking and isolation model, the data layer, the deployment system, a closed-loop AI publishing subsystem, and two reconstructed failure case studies with commit-level evidence. Throughout, design choices are argued from the operating constraint that defines the platform: one operator, one host, no pager rotation to hide behind. The application code is proprietary; the engineering is documented here, with the reusable components published separately [1–5].
+  This document describes the architecture, operation, and failure history of a production platform designed, built, and operated end-to-end by a single engineer: fifteen services and embedded vehicle hardware behind one edge, with CI/CD, health-gated releases with automatic rollback, zero-downtime blue-green swaps, observability, SLO tracking, hourly backups, canary firmware rollouts, and a self-service multi-tenant control plane. The system runs a real business — customers, payments, field crews, vehicles — and has processed 17,000+ scheduled jobs, 5,200+ invoices, and 100,000+ vehicle telemetry readings. We present the service topology, the networking and isolation model, the data layer, the deployment system, a closed-loop AI publishing subsystem, and five reconstructed failure case studies with commit-level evidence. Throughout, design choices are argued from the operating constraint that defines the platform: one operator, one host, no pager rotation to hide behind. The application code is proprietary; the engineering is documented here, with the reusable components published separately [1–5].
 </div>
 
 <h2>Introduction</h2>
@@ -219,9 +219,9 @@
 
   <line x1="270" y1="222" x2="270" y2="292" marker-end="url(#arr)"/>
   <rect x="170" y="296" width="200" height="56" fill="#fff" stroke-width="1.3"/>
-  <text x="270" y="314" text-anchor="middle" stroke="none" fill="#141414">nginx edge proxy</text>
-  <text x="270" y="328" text-anchor="middle" stroke="none" fill="#555" font-size="10">:80 · :443 — TLS termination</text>
-  <text x="270" y="341" text-anchor="middle" stroke="none" fill="#555" font-size="10">SNI vhost routing · device allowlist</text>
+  <text x="270" y="314" text-anchor="middle" stroke="none" fill="#141414">nginx ingress — three tiers</text>
+  <text x="270" y="328" text-anchor="middle" stroke="none" fill="#555" font-size="10">host-front :80/:443 · PROXY protocol</text>
+  <text x="270" y="341" text-anchor="middle" stroke="none" fill="#555" font-size="10">edge TLS → reload-only router</text>
 
   <!-- client applications -->
   <line x1="270" y1="352" x2="270" y2="388" marker-end="url(#arr)"/>
@@ -229,7 +229,7 @@
   <text x="50" y="407" stroke="none" fill="#555" font-size="10.5" font-style="italic">client applications — one container per hostname</text>
   <rect x="60" y="414" width="150" height="40" fill="#fff"/><text x="135" y="431" text-anchor="middle" stroke="none" fill="#141414">public website</text><text x="135" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">web :5015</text>
   <rect x="228" y="414" width="160" height="40" fill="#fff"/><text x="308" y="431" text-anchor="middle" stroke="none" fill="#141414">operations app</text><text x="308" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">next-app :3000</text>
-  <rect x="406" y="414" width="120" height="40" fill="#fff"/><text x="466" y="431" text-anchor="middle" stroke="none" fill="#141414">kiosk</text><text x="466" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5009 · geofenced</text>
+  <rect x="406" y="414" width="120" height="40" fill="#fff"/><text x="466" y="431" text-anchor="middle" stroke="none" fill="#141414">kiosk</text><text x="466" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5009 · offline-first</text>
   <rect x="544" y="414" width="170" height="40" fill="#fff"/><text x="629" y="431" text-anchor="middle" stroke="none" fill="#141414">customer portal</text><text x="629" y="446" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5016 · magic-link auth</text>
 
   <!-- core API -->
@@ -237,7 +237,7 @@
   <text x="398" y="488" stroke="none" fill="#555" font-size="10" font-style="italic">REST /api/v2 · JSON</text>
   <rect x="290" y="506" width="200" height="52" fill="#fff" stroke-width="1.6"/>
   <text x="390" y="524" text-anchor="middle" stroke="none" fill="#141414" font-weight="bold">core API</text>
-  <text x="390" y="538" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5002 — 60 domains · 520 endpoints</text>
+  <text x="390" y="538" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5002 — 80 domains · 716 endpoints</text>
   <text x="390" y="551" text-anchor="middle" stroke="none" fill="#555" font-size="10">single source of truth</text>
 
   <!-- nginx routes device-api straight to the API -->
@@ -249,7 +249,7 @@
   <path d="M490,532 H586 V594" marker-end="url(#arr)"/>
   <rect x="30" y="598" width="440" height="74" stroke-dasharray="3 3" stroke="#999"/>
   <text x="40" y="613" stroke="none" fill="#555" font-size="10.5" font-style="italic">async &amp; integration workers</text>
-  <rect x="44" y="620" width="78" height="44" fill="#fff"/><text x="83" y="637" text-anchor="middle" stroke="none" fill="#141414">sms</text><text x="83" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:8080 iMessage</text>
+  <rect x="44" y="620" width="78" height="44" fill="#fff"/><text x="83" y="637" text-anchor="middle" stroke="none" fill="#141414">sms</text><text x="83" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:8080 text · voice</text>
   <rect x="130" y="620" width="74" height="44" fill="#fff"/><text x="167" y="637" text-anchor="middle" stroke="none" fill="#141414">mail</text><text x="167" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5007 postal</text>
   <rect x="212" y="620" width="78" height="44" fill="#fff"/><text x="251" y="637" text-anchor="middle" stroke="none" fill="#141414">email</text><text x="251" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5008 OAuth</text>
   <rect x="298" y="620" width="84" height="44" fill="#fff"/><text x="340" y="637" text-anchor="middle" stroke="none" fill="#141414">payments</text><text x="340" y="652" text-anchor="middle" stroke="none" fill="#555" font-size="10">:5005 reconcile</text>
@@ -294,7 +294,7 @@
     </marker>
   </defs>
 </svg>
-<figcaption>End-to-end topology and data flow. Browser traffic resolves through Cloudflare-proxied DNS and a single port-forward to the host, where nginx terminates TLS and routes by SNI to one container per hostname; every application converges on the core API, with workers, platform services, and the data plane attached beneath it on the rootless-Podman bridge network. Vehicle telemetry deliberately bypasses the CDN: a DNS-only hostname resolves straight to the WAN address, and nginx forwards only five allow-listed device endpoints. The kiosk and portal additionally open direct SQL connections for latency-sensitive reads. Solid arrows are synchronous request paths; dashed arrows are asynchronous, filtered, or third-party flows.</figcaption>
+<figcaption>End-to-end topology and data flow. Browser traffic resolves through Cloudflare-proxied DNS and a single port-forward to the host, where a three-tier nginx ingress — a PROXY-protocol stream front, a TLS edge, and a reload-only router — routes by hostname to one container per hostname, swapped blue-green on deploy; every application converges on the core API, with workers, platform services, and the data plane attached beneath it on the rootless-Podman bridge network. Vehicle telemetry deliberately bypasses the CDN: a DNS-only hostname resolves straight to the WAN address, and nginx forwards only five allow-listed device endpoints. The kiosk and portal additionally open direct SQL connections for latency-sensitive reads. Solid arrows are synchronous request paths; dashed arrows are asynchronous, filtered, or third-party flows.</figcaption>
 </figure>
 
 <div class="tablewrap">
@@ -302,18 +302,19 @@
   <table>
     <thead><tr><th>Service</th><th>Role</th><th>Stack</th></tr></thead>
     <tbody>
-      <tr><td>Core API</td><td>Business logic — 60 route domains, 520 endpoints</td><td>Python, Flask, MySQL</td></tr>
+      <tr><td>Core API</td><td>Business logic — 80 route domains, 716 endpoints</td><td>Python, Flask, MySQL</td></tr>
       <tr><td>Public website</td><td>Customer-facing site</td><td>Next.js</td></tr>
       <tr><td>Operations dashboard</td><td>Internal operations app</td><td>Next.js</td></tr>
-      <tr><td>Kiosk</td><td>On-site self-service, geofenced timeclock</td><td>TypeScript</td></tr>
+      <tr><td>Kiosk</td><td>Crew field app — geofenced timeclock, offline-first writes, native push</td><td>Next.js 15, Capacitor iOS/Android shell</td></tr>
       <tr><td>Customer portal</td><td>Balance, invoices, service requests</td><td>Next.js 15, magic-link auth</td></tr>
-      <tr><td>SMS / Email / Mail</td><td>Customer messaging, inbound and outbound</td><td>Python, Node</td></tr>
+      <tr><td>SMS + voice</td><td>Texting with SMS fallback; browser softphone, voicemail, recordings</td><td>Python, FastAPI</td></tr>
+      <tr><td>Email / Mail</td><td>Inbox sync and cache; outbound mail from DB-stored templates</td><td>Node</td></tr>
       <tr><td>Payment reconciliation</td><td>Matches external payments to invoices</td><td>Python</td></tr>
       <tr><td>Document extraction</td><td>Inbound documents to structured data</td><td>Python</td></tr>
       <tr><td>Health aggregator</td><td>Fleet-wide probes with auto-discovery</td><td>Python, FastAPI, Docker SDK</td></tr>
       <tr><td>Monitoring dashboard</td><td>Metrics, logs, alerting, SLO tracking</td><td>Next.js, RBAC</td></tr>
       <tr><td>Vehicle telemetry</td><td>OBD-II + GPS collection from vehicles</td><td>C++ / ESP32 / PlatformIO</td></tr>
-      <tr><td>nginx</td><td>Reverse proxy, TLS, routing</td><td>nginx:alpine</td></tr>
+      <tr><td>nginx</td><td>Three-tier ingress: PROXY-protocol front, TLS edge, router</td><td>nginx:alpine</td></tr>
       <tr><td>MySQL, MinIO</td><td>Persistence and object storage</td><td>Containers</td></tr>
     </tbody>
   </table>
@@ -336,6 +337,7 @@
 
 <h2>Networking and the Edge</h2>
 <p>All public hostnames resolve through DNS to a CDN/proxy layer, which forwards to the origin host's nginx edge. nginx terminates TLS and routes by hostname into per-stack container networks. Figure&nbsp;2 traces one request.</p>
+<p>On the original production host the edge is three tiers. A host-network stream proxy owns ports 80 and 443 and forwards with the PROXY protocol, because rootless Podman's port forwarding erased client IP addresses; a TLS edge terminates every site on the host; and a plain-HTTP router routes to containers by name, its only changing part a generated upstream file. Deploys render the configuration, validate it with <code>nginx -t</code> in a throwaway container, and <em>reload</em> — the previous design recreated a single nginx on every change and took every site down with it. Each proxy tier trusts only private-range <code>X-Forwarded-For</code> chains, so audit logs record the visitor rather than the proxy.</p>
 
 <figure>
 <svg viewBox="0 0 760 212" font-family="inherit" font-size="12.5" fill="none" stroke="#141414" stroke-width="1">
@@ -380,7 +382,7 @@
 <h3>Object storage and the media pipeline</h3>
 <p>MinIO provides S3-compatible storage, partitioned into domain-scoped buckets (receipts, social media, website media, message attachments). Media is normalized <em>at upload</em>: phone camera formats (HEIC/HEIF, AVIF) are decoded — via a WASM decoder for the patent-encumbered codec, since prebuilt native image libraries do not ship HEIC support — and re-encoded to platform-safe JPEG before they ever reach a bucket. Serving goes through on-the-fly WebP thumbnail derivation with immutable cache headers keyed on immutable object names, so a 10&nbsp;MB original is fetched once and a 26&nbsp;KB derivative serves every subsequent thumbnail request.</p>
 <h3>Backups</h3>
-<p>The control plane drives hourly per-tenant backups: one gzipped dump covering a stack's business and monitoring schemas, written with drop-and-create semantics so a restore fully reconstructs both, stored mode-600 (the file <em>is</em> the dataset), pruned to the newest 72 (≈3 days). Restores are destructive by definition and require typed confirmation. Restore-plus-redeploy is the entire disaster-recovery story, by design.</p>
+<p>The control plane drives hourly per-tenant backups: one gzipped dump covering a stack's business and monitoring schemas, written with drop-and-create semantics so a restore fully reconstructs both, stored mode-600 (the file <em>is</em> the dataset), pruned to the newest 72 (≈3 days). A backup is a hard gate before every deploy, and is validated by mysqldump's completion marker rather than its size (§10). Restores are destructive by definition and require typed confirmation. Restore-plus-redeploy is the entire disaster-recovery story, by design.</p>
 
 <h2>Deployment and Environments</h2>
 <p>Every service builds in GitHub Actions to multi-architecture images (amd64/arm64 via Buildx + QEMU) published to GHCR; semantic version tags cut releases, and pull requests build without publishing. Deployment is one idempotent tool, <code>stackctl</code>, and a control plane that turns environments into a product (Figure&nbsp;3).</p>
@@ -426,6 +428,19 @@
 </ul>
 <p>The control plane adds the tenant layer: signup-to-workspace provisioning (gated by default — an anonymous form that consumes a stack's worth of RAM is a denial-of-wallet vector), owner/member roles with expiring invitations and per-tenant audit logs, and subscription entitlements with Ed25519-signed licenses enforced at stack level for self-hosted installs. Every state change shells out to the same <code>stackctl</code> used by hand, and status is read back from its registry — so the CLI and the UI cannot drift (§11).</p>
 
+<h3>Release engineering</h3>
+<ul>
+  <li><strong>Health-gated releases.</strong> Booting is not passing: after a swap the service's port is probed for roughly thirty seconds and must answer below HTTP&nbsp;500.</li>
+  <li><strong>Automatic rollback.</strong> A release that fails the gate (<code>unhealthy</code>) or never starts (<code>crashed</code>) is replaced by the last known-good image, itself health-gated. Every attempt is appended to a ledger with its outcome — <code>ok</code>, <code>unhealthy</code>, <code>crashed</code>, <code>build-failed</code>, <code>auto-rollback</code>.</li>
+  <li><strong>Deep rollback and GC.</strong> Any release whose image survives can be restored by SHA, from the CLI or the control plane's Releases panel. Image GC keeps the live image plus the newest <em>N</em> good releases per service, computed as a union across stacks because backend images are shared.</li>
+  <li><strong>Expand/contract migrations.</strong> Migrations run forward-only at API boot, so a schema change may only add — old code must run on the new schema — and destructive cleanup ships at least a release later. The runner treats already-applied DDL as done, so one hand-applied fix cannot wedge every migration behind it; and no route touches the schema at import time, after a constructor that queried a not-yet-migrated table took the whole API down at boot.</li>
+  <li><strong>Fleet rolls.</strong> <code>stackctl deploy-all</code> upgrades every tenant through the same per-stack path — backup, gate, auto-rollback — demo stack first, and stops at the first failure: that stack has already rolled itself back, and stopping keeps one bad release off everyone else.</li>
+  <li><strong>Drift detection.</strong> <code>stackctl drift</code> compares each stack's live SHAs to each repository's HEAD, never pulls, and exits non-zero on drift, so <code>drift --quiet || deploy-all</code> is safe on a timer. The control plane computes it in-process every minute and shows a single "roll the fleet" banner only when something has drifted.</li>
+</ul>
+
+<h3>Blue-green on the original host</h3>
+<p>The business's own production keeps its own deploy script, which since October 2026 swaps blue-green behind the reload-only router of §3. The new container starts beside the old under the same network alias and must return 200 <em>through the router</em> within 240&nbsp;s or is discarded; then the upstream flips, the old container drains (20&nbsp;s for the API, 10&nbsp;s for frontends) and stops, and in-flight long-running work keeps the old API alive until it finishes. A file lock allows one deploy at a time, <code>--rollback</code> restores the previous image the same way, and a five-minute self-heal cron restarts what has fallen over. After a reboot, a systemd user unit brings every project on the host back in dependency order — datastores, backends, frontends, ingress — and rewrites the router's upstreams, because container addresses change on reboot.</p>
+
 <h3>Multi-tenant productization</h3>
 <p>As of August 2026 the platform is offered multi-tenant under the product name Field Platform (fieldplatform.io). The control plane — signup and admin UI over <code>stackctl</code> — itself runs containerized on the same host and drives the host container engine over its socket (Docker-outside-of-Docker); the repository is bind-mounted into the container at an identical absolute path, so every host-path the tooling constructs remains valid on both sides of the boundary. The engine is addressed through the Docker-compatibility API rather than the native libpod endpoint, because the host's podman&nbsp;3.4 rejects newer remote clients.</p>
 <p>Each customer stack is isolated exactly as production and staging are: its own bridge network, its own MySQL and MinIO, per-stack secrets, and images tagged by git SHA — backends shared across stacks, frontends built per stack because <code>NEXT_PUBLIC</code> branding is baked at build time. Deploys remain change-detected by SHA, and an optional registry pull-through (<code>IMAGE_REGISTRY</code>) substitutes prebuilt backend images for local builds. Provisioning is fully dynamic: stack creation writes the stack's DNS record set through the Cloudflare API — CNAMEs to a single unproxied origin record, each tagged with a <code>stackctl:&lt;name&gt;</code> comment so that destroy removes exactly what create wrote — and stretches one Let's Encrypt certificate over every stack's <code>&lt;domain&gt;</code> and <code>*.&lt;domain&gt;</code> via user-owned certbot DNS-01. Renewed pem files are hot-swapped by content overwrite, preserving the inode that nginx's bind mounts track, followed by a graceful reload.</p>
@@ -434,7 +449,8 @@
 
 <h2>Observability and Reliability</h2>
 <p><strong>Health aggregation.</strong> A dedicated service auto-discovers containers via the container-engine API and probes each over HTTP, MySQL, or TCP on a background loop — no manual registration, no stale check configuration.</p>
-<p><strong>Monitoring and SLOs.</strong> A purpose-built dashboard tracks container metrics, aggregates logs, fires alerts, and tracks SLOs against explicit targets, behind database-backed RBAC. Building rather than buying kept ingest on-host and the bill at zero (§11).</p>
+<p><strong>Monitoring and SLOs.</strong> A purpose-built dashboard tracks container metrics, aggregates logs, fires alerts, and tracks SLOs against explicit targets, behind database-backed RBAC. Building rather than buying kept ingest on-host and the bill at zero (§11). The SLOs are kept honest by construction: every SLI has a minimum-sample floor (a single slow call once held a latency SLO in breach for three days), snapshots older than six hours read as "no data" rather than "breach," and client errors thrown by injected third-party scripts are excluded from the error budget — an SLO that measures other people's code spends the attention a real outage needs. The telephony gateway exports OTLP metrics into the same dashboard, fanned out into count, average, p95 and max, with alert rules and a public synthetic check.</p>
+<p><strong>Probing what the client sees.</strong> Ingress tiers that speak only the PROXY protocol publicly are probed on an internal <code>/healthz</code> listener, replacing an "accept any status" exemption that would have hidden a genuinely broken proxy.</p>
 <p><strong>Notification stream.</strong> Operational events a solo operator must not miss — failed publishes, OAuth tokens near expiry, unanswered customer comments — flow through an event table into the operations app's notification bell, piggybacked on existing scheduler cadence rather than adding new pollers.</p>
 
 <h2>Case Study: AI-Assisted Publishing as a Closed Loop</h2>
@@ -479,6 +495,10 @@
 
 <h2>Field Hardware: Store-and-Forward Telemetry</h2>
 <p>Field vehicles are the harshest environment in the system: LTE dead zones, uploads dying mid-flight, power cut at ignition-off. The firmware treats the SD card as the source of truth — every OBD-II/GPS reading lands on disk as NDJSON before anything else, files rotate by size and time and survive reboots, and an uploader drains them as gzip-compressed batches with retry and backoff whenever connectivity allows. For telemetry, durability beats latency: a reading that arrives ten minutes late is fine; one that never arrives is not. The fleet has delivered 100,000+ readings to date under this discipline.</p>
+<p>Compression is real gzip from a small dependency-free on-device encoder, cutting LTE data roughly sixfold. Recovery after a power cut trims a torn final row, and the API skips torn lines rather than rejecting a batch. A modem watchdog resets the radio after six minutes with nothing leaving the device and reboots after fifteen, stopping after three consecutive reboots — a hardware watchdog only catches a frozen loop, not a healthy loop talking to a dead radio.</p>
+<p><strong>Canary rollouts.</strong> Over-the-air firmware goes to canary trucks first, promotes fleet-wide automatically once one reports <code>validated</code>, and halts on a rollback or verify failure. The update lane runs first in every loop pass, ahead of upload, so a truck can always take the fix for whatever else is wrong with it (§10).</p>
+<p><strong>A virtual truck.</strong> The whole firmware runs on a simulated vehicle against the real API image and the production schema, with injected modem faults and power cuts. It found the torn-row defect before a customer's truck did.</p>
+<p><strong>Offline-first crew app.</strong> The kiosk ships to phones as a Capacitor shell with native push (APNs, FCM). Every write carries an idempotency key the server remembers for thirty days, so a queued write replayed on reconnect applies exactly once; a write the server rejects lands in a visible "didn't sync" list instead of vanishing.</p>
 
 <h2>Security Model</h2>
 <ul>
@@ -487,11 +507,14 @@
   <li><strong>TLS at the edge, automatically.</strong> Certificates are provisioned and renewed per routed domain, including new tenant subdomains on first deploy.</li>
   <li><strong>Passwordless customers.</strong> Portal sign-in is a 15-minute magic link over SMS; the request endpoint answers identically for any input and is rate-limited (enumeration-proof), and sessions are stateless JWTs revocable by one secret rotation.</li>
   <li><strong>AuthN/AuthZ.</strong> Database-backed RBAC with role-to-permission mapping, session management, and a token blacklist for immediate revocation.</li>
+  <li><strong>API keys.</strong> Stored only as SHA-256 hashes and shown once; read, write, admin and custom scopes; no key can manage keys, and deletion requires an explicit delete permission.</li>
+  <li><strong>Audited impersonation.</strong> Admin "view as" issues a one-hour token carrying <code>impersonated_by</code>; start, end and denied attempts all reach the login audit, which records the real client IP.</li>
+  <li><strong>Field-device sessions.</strong> Kiosk identity is a server-side session (hash stored, HttpOnly cookie) with tiered PIN lockout and crew-scoped authorization — never an id the page supplies (§10).</li>
   <li><strong>Physical-world checks.</strong> The timeclock validates GPS proximity to a configured site radius on <em>both</em> clock-in and clock-out; punch and timecard records are referentially linked so removing one cannot strand the other.</li>
 </ul>
 
 <h2>Failure Case Studies</h2>
-<p>Reliability claims are cheap; commit logs are not. Two incidents, reconstructed with hashes.</p>
+<p>Reliability claims are cheap; commit logs are not. Five incidents, reconstructed with hashes.</p>
 
 <h3>June 2026 — the observer effect</h3>
 <p>The monitoring dashboard gained a live topology view — container stats, sparklines, request traces — on top of its real-user-monitoring ingest. The monitoring database lives on the same MySQL server as production, and within hours the topology view was timing out, each timeout representing load pressure on the database that also serves the business. The first fix made it worse: parallelizing all queries and trace fetches multiplied the concurrent load on an already-stressed database, and was reverted the same day. The durable fix went the opposite direction — batch the ingest, reduce limits, poll slower, fetch less, and put explicit timeouts and error containment on every query so the dashboard degrades instead of hammering.</p>
@@ -514,15 +537,46 @@ jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
   <pre>aug 25  8700923  Bump runtime image to node:20-alpine for sharp 0.35</pre>
 </div>
 
+<h3>July–October 2026 — the update path must survive</h3>
+<p>All four field trucks went dark at different points between late July and late September. The root cause was arithmetic: listing the SD-card upload backlog was quadratic — 848 files took 338&nbsp;seconds — so the main loop completed once every six minutes, and the firmware-update path, sharing that loop, starved. The trucks could not receive the fix for the problem that was starving them, and retryable network errors were quarantining good batches on top. Compounding it, firmware 0.0.17 had gone fleet-wide in a single step and reboot-looped the trucks that took it — closing, a second way, the path a fix would have to travel. The durable fix was structural: name-only directory reads, the update lane first in every pass and downloading in bursts, a retry cap with a network reset, canary rollouts that promote or halt themselves, and the virtual-truck harness in CI.</p>
+<p class="lesson">The ability to receive an update must never depend on the rest of the system being healthy — and no single update may be able to break that ability everywhere at once.</p>
+<div class="listing">
+  <div class="lcap">The structural fix.</div>
+  <pre>oct 12  98d3b65  fix: a spool backlog froze the main loop for minutes per pass
+oct 12  e129ccd  ota: run the update lane first and in bursts so a truck can always take a fix
+oct 12  3fbb9ec  ota: canary rollouts that promote or halt themselves; ingest is atomic
+oct 12  d1ab6b1  test: virtual truck, the whole firmware on a simulated truck against the real API</pre>
+</div>
+
+<h3>September 2026 — the backup that fit</h3>
+<p>The pre-deploy backup is a hard gate, so when it began failing, no stack could deploy. Layer one: since MySQL 5.7.31, mysqldump needs the global <code>PROCESS</code> privilege to dump tablespaces; per-tenant users deliberately lack it, and the error went to <code>/dev/null</code>. Fixing that exposed layer two, which was worse: Podman 3.4 drops the tail of long <code>exec</code> output streams, so <code>exec mysqldump | gzip</code> produced 128&nbsp;KB from a 117&nbsp;MB dump — <em>0.1% of the database</em> — and the validation, "larger than 512 bytes," passed it. The fix: <code>--no-tablespaces</code>; dump and compress inside the container, then copy the file out; validate by the dump's completion marker; surface every error.</p>
+<p class="lesson">Check a backup for completeness, not size. A swallowed error usually hides a worse one beneath it.</p>
+<div class="listing">
+  <div class="lcap">Both layers, same day.</div>
+  <pre>sep 04  443e93b  backup: mysqldump needs --no-tablespaces, and a failure must say why
+sep 04  6183ad5  backup: the dump was being truncated to 0.1% of the database</pre>
+</div>
+
+<h3>October 2026 — identity from the client</h3>
+<p>A review of the crew kiosk found that every route believed the employee id the page sent: anyone who could reach the kiosk could clock in as anyone, and the PIN had no attempt limit. The fix moved identity to the server — PIN sign-in creates a session row, of which only the hash is stored, carried in an HttpOnly cookie and checked by middleware on every API call — with tiered lockout, crew-scoped authorization, and write-only replay keys so offline writes still post as their original author. A sweep of the core API in the same period closed several unauthenticated write endpoints and removed cost catalogs and draft quotes from customer-facing reads.</p>
+<p class="lesson">Identity is something the server establishes, never something the client asserts.</p>
+<div class="listing">
+  <div class="lcap">The fix.</div>
+  <pre>oct 22  a4cdda2  Kiosk: the server decides who is signed in, not the page</pre>
+</div>
+
+<p><strong>Smaller findings, one theme: silent success.</strong> The iMessage gateway answered HTTP&nbsp;200 with an error inside, so failed sends read as sent (it now returns 502, triggering SMS fallback). An external geodata API began rejecting the application's User-Agent, and site maps quietly lost their building footprints. A tracking pixel pointed at <code>127.0.0.1</code> through an environment-variable spelling mismatch. A raise repriced a whole year of payroll cost because history was computed from the <em>current</em> rate. Each was fixed by making the failure loud, or by pricing history from records rather than current state.</p>
+
 <h2>Design Rationale</h2>
-<p><strong>Compose over Kubernetes.</strong> The author operates multi-tenant Kubernetes at day-job scale — which is exactly why this platform does not use it. On a single host, Kubernetes buys autoscaling, bin-packing, and rolling deploys this system does not need, at the price of a control plane to patch, upgrades to sequence, and a far larger failure surface to debug alone. Compose gives a one-file topology, deterministic deploys, and disaster recovery that amounts to "restore volumes, re-run the deploy." The revisit trigger is explicit: a second host, or a genuine need for zero-downtime rollouts.</p>
+<p><strong>Compose over Kubernetes.</strong> The author operates multi-tenant Kubernetes at day-job scale — which is exactly why this platform does not use it. On a single host, Kubernetes buys autoscaling, bin-packing, and rolling deploys this system does not need, at the price of a control plane to patch, upgrades to sequence, and a far larger failure surface to debug alone. Compose gives a one-file topology, deterministic deploys, and disaster recovery that amounts to "restore volumes, re-run the deploy." The revisit trigger was explicit: a second host, or a genuine need for zero-downtime rollouts. When the second arrived, it was met without Kubernetes — blue-green swaps behind a reload-only nginx router, one deploy script and no orchestrator (§5). The trigger is now just the first.</p>
 <p><strong>Build over buy for monitoring.</strong> Hosted observability is priced per container and per GB of ingest; for a single-host platform that bill would rival the entire infrastructure budget. The requirements were narrow and container-native — stats, logs, alerts, SLOs — and building purpose-fit kept data on-host and SLO tracking implemented as practiced professionally: explicit targets reviewed against reality.</p>
 <p><strong>Prompts as data, not code.</strong> Prompt tuning is the highest-frequency change in the AI subsystem; making it a deploy would either freeze iteration or turn every voice tweak into a release. The cost is a settings table and a seeding pass at startup; the payoff is a feedback loop — the per-angle engagement scoreboard — that can be acted on the same day it reports.</p>
 <p><strong>Per-environment isolation on one host.</strong> Shared-nothing per environment means a full MySQL and object store per stack, trading RAM and disk for a blast radius that stops at one environment. Staging shaped exactly like production catches configuration drift before customers do, and the same mechanism makes a dedicated customer instance a one-command operation. The right trade while stack count is small — and the thing to revisit before it is not.</p>
+<p><strong>Rollback that does not share the failure.</strong> An early automatic rollback failed exactly the way the deploy had — a container-engine socket path that did not resolve from inside the containerized control plane — and left the service gone. A rollback that depends on the same precondition as the deploy it protects is not a safety net. Rollbacks now reuse images that already ran, health-gated, and fleet rolls stop at the first failure rather than trusting the next stack to differ.</p>
 <p><strong>One source of truth for deploys.</strong> The control plane could talk to the container engine directly and be faster to build. Instead, every state change shells out to the same <code>stackctl</code> used by hand, and status reads back from its registry. A second implementation of "what does deployed mean" guarantees the UI and the CLI eventually disagree — usually during an incident, when the dashboard is the thing being trusted. Shelling out costs a process spawn; disagreeing costs the outage.</p>
 
 <h2>Conclusion</h2>
-<p>A production platform sized honestly to its operating constraint — one operator — looks different from one sized to a résumé: fewer moving parts, names over addresses, isolation over sharing, purpose-built observability over hosted bills, and prompts, settings, and deploy state kept where a single person can reason about them at 2&nbsp;a.m. The system has run a real business continuously since 2023, and its two best-documented failures each produced a rule that the architecture now enforces structurally. The author is happy to walk through any component in depth — including code — in an interview setting.</p>
+<p>A production platform sized honestly to its operating constraint — one operator — looks different from one sized to a résumé: fewer moving parts, names over addresses, isolation over sharing, purpose-built observability over hosted bills, and prompts, settings, and deploy state kept where a single person can reason about them at 2&nbsp;a.m. The system has run a real business continuously since 2023, and each of its best-documented failures produced a rule the architecture now enforces structurally: monitoring is production, a green build is not a loadable one, a backup is checked for completeness, identity comes from the server, and the update path never depends on the health of what it updates. The author is happy to walk through any component in depth — including code — in an interview setting.</p>
 
 <h2 class="unnumbered">References</h2>
 <div class="refs">
@@ -536,7 +590,7 @@ jun 09  4aa70e5  Fix topology loading: reduce limits, add timeouts, catch errors
 </div>
 
 <hr class="footrule">
-<p class="colophon">Revised August 26, 2026 · typeset in Latin Modern · <a href="overview.html">interactive overview</a> · <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
+<p class="colophon">Revised November 9, 2026 · typeset in Latin Modern · <a href="overview.html">interactive overview</a> · <a href="https://www.linkedin.com/in/rahb3rt">LinkedIn</a> · <a href="https://github.com/rahb3rt">GitHub</a></p>
 
 </div>
 </body>
